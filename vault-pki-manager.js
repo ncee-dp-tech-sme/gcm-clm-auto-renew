@@ -35,19 +35,29 @@ class VaultPkiManager {
         }
     }
 
-    // Helper method to get fresh token from environment or file
+    // Helper method to get fresh token from file or environment
+    // Priority: 1. Token file (written by vault-init), 2. Environment variable
     getFreshToken() {
         const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
-        let vaultToken = process.env.VAULT_TOKEN || '';
+        let vaultToken = '';
         
-        if (!vaultToken) {
-            try {
-                if (fs.existsSync(VAULT_TOKEN_FILE)) {
-                    vaultToken = fs.readFileSync(VAULT_TOKEN_FILE, 'utf8').trim();
+        // First, try to read from file (most up-to-date from vault-init)
+        try {
+            if (fs.existsSync(VAULT_TOKEN_FILE)) {
+                vaultToken = fs.readFileSync(VAULT_TOKEN_FILE, 'utf8').trim();
+                if (vaultToken) {
+                    console.log('Using Vault token from file:', VAULT_TOKEN_FILE);
+                    return vaultToken;
                 }
-            } catch (error) {
-                console.error('Error reading Vault token file:', error);
             }
+        } catch (error) {
+            console.error('Error reading Vault token file:', error);
+        }
+        
+        // Fallback to environment variable
+        vaultToken = process.env.VAULT_TOKEN || '';
+        if (vaultToken) {
+            console.log('Using Vault token from environment variable');
         }
         
         return vaultToken;
