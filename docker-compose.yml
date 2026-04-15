@@ -81,8 +81,7 @@ services:
     networks:
       - cert-monitor-network
     depends_on:
-      vault:
-        condition: service_healthy
+      - vault
     command: /bin/sh /vault-init.sh
     restart: "no"
 
