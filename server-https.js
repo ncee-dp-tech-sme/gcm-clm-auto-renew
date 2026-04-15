@@ -9,7 +9,13 @@ const AcmeClientManager = require('./acme-client-manager');
 
 const app = express();
 const config = require('./config.json');
-const CERT_FILE = path.join(__dirname, 'certificates.json');
+
+// Use /app/data for persistent storage in Docker, fallback to current directory
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+const CERT_FILE = path.join(DATA_DIR, 'certificates.json');
 
 // Initialize ACME client manager
 const acmeManager = new AcmeClientManager();

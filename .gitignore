@@ -23,6 +23,11 @@ public/.well-known/
 .env
 .env.local
 *.env
+!.env.example
+
+# Data directories
+data/
+certs/
 
 # Logs
 *.log

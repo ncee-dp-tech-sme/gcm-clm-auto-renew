@@ -1,0 +1,63 @@
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (will be copied separately if needed)
+*.md
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Certificate and key files (will be generated in container)
+*.pem
+*.key
+*.crt
+*.csr
+
+# Data files (will be persisted via volumes)
+data/
+certs/
+
+# macOS specific
+nginx.conf
+
+# Scripts not needed in container
+setup-nginx.sh
+setup-vault-acme.sh

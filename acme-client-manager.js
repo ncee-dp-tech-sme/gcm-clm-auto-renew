@@ -3,8 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 class AcmeClientManager {
-    constructor(configPath = './acme-config.json') {
-        this.configPath = configPath;
+    constructor(configPath = null) {
+        // Use /app/data for persistent storage in Docker, fallback to current directory
+        const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        
+        this.configPath = configPath || path.join(DATA_DIR, 'acme-config.json');
         this.config = this.loadConfig();
         this.client = null;
         this.accountKey = null;
@@ -26,14 +32,17 @@ class AcmeClientManager {
 
     // Get default configuration
     getDefaultConfig() {
+        const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+        const CERT_DIR = process.env.CERT_DIR || path.join(__dirname, 'certs');
+        
         return {
             email: '',
             domain: '',
             acmeDirectoryUrl: 'https://acme-staging-v02.api.letsencrypt.org/directory',
             challengeType: 'http-01',
-            accountKeyPath: './acme-account-key.pem',
-            certificatePath: './acme-certificate.pem',
-            privateKeyPath: './acme-private-key.pem',
+            accountKeyPath: path.join(DATA_DIR, 'acme-account-key.pem'),
+            certificatePath: path.join(CERT_DIR, 'fullchain.pem'),
+            privateKeyPath: path.join(CERT_DIR, 'privkey.pem'),
             checkIntervalMinutes: 3
         };
     }
