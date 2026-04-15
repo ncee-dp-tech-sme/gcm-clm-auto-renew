@@ -10,12 +10,19 @@ acme-certificate.pem
 acme-private-key.pem
 acme-config.json
 
+# Vault ACME certificates and keys (SENSITIVE - DO NOT COMMIT)
+vault-acme-account-key.pem
+vault-acme-certificate.pem
+vault-acme-private-key.pem
+vault-acme-config/
+
 # ACME challenge files
 public/.well-known/
 
 # Environment variables
 .env
 .env.local
+*.env
 
 # Logs
 *.log

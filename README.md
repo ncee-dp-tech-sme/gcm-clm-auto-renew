@@ -26,6 +26,18 @@ A comprehensive web application that monitors SSL/TLS certificates and provides 
 - **Security Headers**: Built-in security headers and best practices
 - **Static File Optimization**: Caching and performance optimization
 
+
+## 🏦 HashiCorp Vault Integration
+
+- **Enterprise PKI**: Use Vault as your internal Certificate Authority
+- **ACME Support**: Vault provides ACME server implementation
+- **Automated Setup**: One-command Vault ACME configuration
+- **Centralized Management**: Manage all certificates through Vault
+- **Audit Trails**: Complete audit logging of certificate operations
+- **Policy-Based Access**: Fine-grained access control with Vault policies
+
+📖 **See [VAULT-ACME-README.md](./VAULT-ACME-README.md) for Vault integration guide.**
+
 📖 **See [NGINX-README.md](./NGINX-README.md) for nginx setup instructions.**
 
 📖 **See [ACME-README.md](./ACME-README.md) for detailed ACME setup and usage instructions.**
