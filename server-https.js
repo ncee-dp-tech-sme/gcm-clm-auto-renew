@@ -345,14 +345,58 @@ app.post('/api/acme/obtain-certificate', async (req, res) => {
             status: status
         });
         
-        // Restart server with HTTPS after a delay
+        // Reload nginx to use new certificate
         setTimeout(() => {
-            console.log('Restarting server with HTTPS...');
-            process.exit(0); // Let process manager restart with HTTPS
-        }, 2000);
+            console.log('Reloading nginx...');
+            const { exec } = require('child_process');
+            exec('nginx -s reload', (error, stdout, stderr) => {
+                if (error) {
+                    console.error('Error reloading nginx:', error);
+                } else {
+                    console.log('Nginx reloaded successfully');
+                }
+            });
+        }, 1000);
         
     } catch (error) {
         console.error('Error obtaining certificate:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.post('/api/acme/retrieve-certificate', async (req, res) => {
+    try {
+        console.log('Retrieving certificate from Vault...');
+        
+        // Use the same obtainCertificate method - it will fetch the latest certificate from Vault
+        const result = await vaultPkiManager.obtainCertificate();
+        
+        const status = vaultPkiManager.getStatus();
+        
+        res.json({
+            success: true,
+            message: 'Certificate retrieved and installed successfully',
+            status: status
+        });
+        
+        // Reload nginx to use the retrieved certificate
+        setTimeout(() => {
+            console.log('Reloading nginx...');
+            const { exec } = require('child_process');
+            exec('nginx -s reload', (error, stdout, stderr) => {
+                if (error) {
+                    console.error('Error reloading nginx:', error);
+                } else {
+                    console.log('Nginx reloaded successfully');
+                }
+            });
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error retrieving certificate:', error);
         res.status(500).json({
             success: false,
             error: error.message

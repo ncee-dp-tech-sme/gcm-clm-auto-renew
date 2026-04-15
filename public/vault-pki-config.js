@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
     document.getElementById('obtainCertBtn').addEventListener('click', obtainCertificate);
+    document.getElementById('retrieveCertBtn').addEventListener('click', retrieveCertificate);
+    document.getElementById('toggleTokenBtn').addEventListener('click', toggleTokenVisibility);
 });
 
 // Load current configuration
@@ -18,6 +20,10 @@ async function loadConfig() {
         
         if (data.success) {
             currentConfig = data.config;
+            
+            // Populate Vault connection fields
+            document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
+            document.getElementById('displayVaultToken').value = currentConfig.vaultToken || '';
             
             // Populate form fields
             document.getElementById('commonName').value = currentConfig.commonName || 'localhost';
@@ -131,7 +137,7 @@ async function obtainCertificate() {
     }
     
     try {
-        showStatus('🔄 Requesting certificate from Vault PKI...', 'info');
+        showStatus('🔄 Requesting new certificate from Vault PKI...', 'info');
         
         const response = await fetch('/api/acme/obtain-certificate', {
             method: 'POST'
@@ -140,7 +146,7 @@ async function obtainCertificate() {
         const data = await response.json();
         
         if (data.success) {
-            showStatus('✅ Certificate obtained successfully! Server will restart to use the new certificate.', 'success');
+            showStatus('✅ Certificate obtained successfully! Nginx will be reloaded.', 'success');
             
             // Reload status after a delay
             setTimeout(() => {
@@ -152,6 +158,52 @@ async function obtainCertificate() {
     } catch (error) {
         console.error('Error obtaining certificate:', error);
         showStatus('❌ Error obtaining certificate', 'error');
+    }
+}
+
+// Retrieve and install certificate from Vault
+async function retrieveCertificate() {
+    if (!currentConfig || !currentConfig.commonName) {
+        showStatus('Please save configuration first', 'error');
+        return;
+    }
+    
+    try {
+        showStatus('🔄 Retrieving certificate from Vault...', 'info');
+        
+        const response = await fetch('/api/acme/retrieve-certificate', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showStatus('✅ Certificate retrieved and installed successfully! Nginx will be reloaded.', 'success');
+            
+            // Reload status after a delay
+            setTimeout(() => {
+                loadConfig();
+            }, 2000);
+        } else {
+            showStatus(`❌ Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error retrieving certificate:', error);
+        showStatus('❌ Error retrieving certificate', 'error');
+    }
+}
+
+// Toggle token visibility
+function toggleTokenVisibility() {
+    const tokenInput = document.getElementById('displayVaultToken');
+    const toggleBtn = document.getElementById('toggleTokenBtn');
+    
+    if (tokenInput.type === 'password') {
+        tokenInput.type = 'text';
+        toggleBtn.textContent = '🙈 Hide';
+    } else {
+        tokenInput.type = 'password';
+        toggleBtn.textContent = '👁️ Show';
     }
 }
 
