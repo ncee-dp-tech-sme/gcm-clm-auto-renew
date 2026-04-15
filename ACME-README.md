@@ -26,8 +26,8 @@ The application now supports automatic SSL/TLS certificate management using the 
 ### 🌐 HTTPS Server
 - Automatically switches to HTTPS when certificates are available
 - Falls back to HTTP if no certificates are present
-- Serves HTTP on port 3000 for ACME challenges
-- Serves HTTPS on port 3443
+- Serves HTTP on port 3000 for backend/API access and challenge handling
+- Standard UI access is through HTTPS on port 443 (typically `https://localhost` behind nginx/Docker)
 
 ### ⚙️ Web-Based Configuration
 - Configure ACME settings through a web interface
@@ -52,7 +52,8 @@ The application now supports automatic SSL/TLS certificate management using the 
    ```
 
 2. **Access the ACME configuration page**:
-   - Navigate to `http://your-server:3000/acme-config.html`
+   - Navigate to `https://your-server/acme-config.html`
+   - For direct backend access during development, you can also use `http://your-server:3000/acme-config.html`
 
 3. **Configure ACME settings**:
    - **Email**: Your email address (required for account notifications)
@@ -288,7 +289,7 @@ Monitor certificate status:
 For issues related to:
 - **Let's Encrypt**: https://community.letsencrypt.org/
 - **ACME Protocol**: https://tools.ietf.org/html/rfc8555
-- **This Application**: Check server logs and GitHub issues
+- **This Application**: Check server logs and GitHub issues at https://github.com/ncee-dp-tech-sme/gcm-clm-auto-renew
 
 ## References
 

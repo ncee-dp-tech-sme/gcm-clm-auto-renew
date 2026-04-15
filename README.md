@@ -66,6 +66,10 @@ A comprehensive web application that monitors SSL/TLS certificates and provides 
 ## Installation
 
 1. **Clone or download this repository**
+   ```bash
+   git clone https://github.com/ncee-dp-tech-sme/gcm-clm-auto-renew.git
+   cd gcm-clm-auto-renew
+   ```
 
 2. **Install dependencies**
    ```bash
@@ -97,7 +101,9 @@ A comprehensive web application that monitors SSL/TLS certificates and provides 
 
 2. **Open your browser**
    
-   Navigate to: `http://localhost:3000`
+   Navigate to: `https://localhost`
+   
+   For direct backend access during development, use: `http://localhost:3000`
 
 3. **Check certificates**
    

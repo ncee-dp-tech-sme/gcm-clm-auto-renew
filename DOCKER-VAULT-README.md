@@ -34,7 +34,7 @@ This setup is ideal for:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ncee-dp-tech-sme/gcm-clm-auto-renew.git
 cd gcm-clm-auto-renew
 
 # Start all services
@@ -58,13 +58,13 @@ docker-compose logs vault-init
 
 ### 3. Access the Application
 
-- **Certificate Monitor**: https://localhost
+- **Certificate Monitor UI**: https://localhost
 - **Vault UI**: http://localhost:8200/ui (Token: `root`)
-- **Direct Node.js**: http://localhost:3000
+- **Direct Node.js backend**: http://localhost:3000
 
 ### 4. Configure ACME
 
-1. Navigate to http://localhost:3000/acme-config.html
+1. Navigate to https://localhost/acme-config.html
 2. The form should be pre-filled with Vault ACME settings:
    - Email: `admin@localhost`
    - Domain: `localhost`
@@ -205,7 +205,7 @@ To trust this CA in your browser:
 
 #### Via Web Interface
 
-1. Navigate to http://localhost:3000/acme-config.html
+1. Navigate to https://localhost/acme-config.html
 2. Configuration should be pre-filled
 3. Click "Obtain Certificate"
 4. Monitor the status messages

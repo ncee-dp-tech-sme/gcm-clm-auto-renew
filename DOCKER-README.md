@@ -36,7 +36,7 @@ The application runs in a single container using supervisord to manage both ngin
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ncee-dp-tech-sme/gcm-clm-auto-renew.git
    cd gcm-clm-auto-renew
    ```
 
@@ -54,8 +54,8 @@ The application runs in a single container using supervisord to manage both ngin
 
 4. **Access the application:**
    - HTTP: http://localhost
-   - HTTPS: https://localhost
-   - Direct Node.js: http://localhost:3000
+   - HTTPS UI: https://localhost
+   - Direct Node.js backend: http://localhost:3000
 
 ### Using Docker CLI
 
@@ -209,6 +209,8 @@ All services are accessible from the host machine using `localhost`:
 - https://localhost
 - http://localhost:3000
 
+Use `https://localhost` as the standard UI entrypoint.
+
 ### Accessing from Other Containers
 
 Other containers in the same network can access the service using the container name:
@@ -249,9 +251,10 @@ curl http://localhost:3000/health
 **Problem:** Browser shows certificate warning on first access.
 
 **Solution:** The container creates self-signed certificates on first start. Configure ACME to obtain valid certificates:
-1. Access http://localhost:3000/acme-config.html
-2. Configure ACME settings
-3. Obtain certificate
+1. Access the UI at https://localhost
+2. Open the ACME configuration page at https://localhost/acme-config.html
+3. Configure ACME settings
+4. Obtain certificate
 
 #### 2. Cannot Connect to Vault
 

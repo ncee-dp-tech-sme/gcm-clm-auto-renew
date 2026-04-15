@@ -252,7 +252,9 @@ npm start
 
 ### 4. Configure ACME
 
-Navigate to: `http://localhost:3000/acme-config.html`
+Navigate to: `https://localhost/acme-config.html`
+
+For direct backend access during development, you can also use: `http://localhost:3000/acme-config.html`
 
 The configuration will be pre-filled with Vault ACME settings. Click "Obtain Certificate Now".
 

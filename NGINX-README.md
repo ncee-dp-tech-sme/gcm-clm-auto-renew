@@ -59,6 +59,10 @@ Before setting up nginx, you need to obtain certificates:
 
 2. Navigate to the ACME configuration page:
    ```
+   https://localhost/acme-config.html
+   ```
+   For direct backend access during development, you can also use:
+   ```
    http://localhost:3000/acme-config.html
    ```
 
