@@ -330,13 +330,14 @@ function showStatus(message, type) {
         return;
     }
     statusEl.textContent = message;
-    statusEl.className = `status-message ${type}`;
-    statusEl.style.display = 'block';
+    statusEl.className = `status-message status-${type}`;
     
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        hideStatus();
-    }, 5000);
+    // Auto-hide after 5 seconds for success/info messages
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            hideStatus();
+        }, 5000);
+    }
 }
 
 // Hide status message
@@ -346,7 +347,6 @@ function hideStatus() {
         return;
     }
     statusEl.className = 'status-message';
-    statusEl.style.display = 'none';
 }
 
 // Update last updated time
