@@ -18,7 +18,15 @@ class VaultPkiManager {
         try {
             if (fs.existsSync(this.configPath)) {
                 const data = fs.readFileSync(this.configPath, 'utf8');
-                return JSON.parse(data);
+                const config = JSON.parse(data);
+                
+                // Always refresh token from environment/file, never trust saved token
+                const freshToken = this.getFreshToken();
+                if (freshToken) {
+                    config.vaultToken = freshToken;
+                }
+                
+                return config;
             }
             return this.getDefaultConfig();
         } catch (error) {
@@ -27,15 +35,11 @@ class VaultPkiManager {
         }
     }
 
-    getDefaultConfig() {
-        const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-        const CERT_DIR = process.env.CERT_DIR || path.join(__dirname, 'certs');
-        const VAULT_ADDR = process.env.VAULT_ADDR || 'http://vault:8200';
+    // Helper method to get fresh token from environment or file
+    getFreshToken() {
         const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
-        
         let vaultToken = process.env.VAULT_TOKEN || '';
         
-        // If no token in environment, try reading from file
         if (!vaultToken) {
             try {
                 if (fs.existsSync(VAULT_TOKEN_FILE)) {
@@ -45,6 +49,16 @@ class VaultPkiManager {
                 console.error('Error reading Vault token file:', error);
             }
         }
+        
+        return vaultToken;
+    }
+
+    getDefaultConfig() {
+        const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+        const CERT_DIR = process.env.CERT_DIR || path.join(__dirname, 'certs');
+        const VAULT_ADDR = process.env.VAULT_ADDR || 'http://vault:8200';
+        
+        const vaultToken = this.getFreshToken();
         
         if (!vaultToken) {
             console.warn('WARNING: No Vault token found in environment or file');
@@ -69,26 +83,13 @@ class VaultPkiManager {
             
             // Always refresh the token from environment/file before saving
             // This ensures we don't save a stale or empty token
-            const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
-            let vaultToken = process.env.VAULT_TOKEN || '';
-            
-            if (!vaultToken) {
-                try {
-                    if (fs.existsSync(VAULT_TOKEN_FILE)) {
-                        vaultToken = fs.readFileSync(VAULT_TOKEN_FILE, 'utf8').trim();
-                    }
-                } catch (error) {
-                    console.error('Error reading Vault token file:', error);
-                }
-            }
-            
-            // Only update token if we found a valid one
-            if (vaultToken) {
-                this.config.vaultToken = vaultToken;
+            const freshToken = this.getFreshToken();
+            if (freshToken) {
+                this.config.vaultToken = freshToken;
             }
             
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-            console.log('Vault PKI configuration saved');
+            console.log('Vault PKI configuration saved with fresh token');
             return true;
         } catch (error) {
             console.error('Error saving Vault PKI config:', error);
