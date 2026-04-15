@@ -17,6 +17,17 @@ A comprehensive web application that monitors SSL/TLS certificates and provides 
 - **Web-Based ACME Configuration**: Configure ACME settings through a user-friendly interface
 - **Let's Encrypt Integration**: Full support for Let's Encrypt (staging and production)
 
+
+## 🌐 Nginx Reverse Proxy
+
+- **Production-Ready Setup**: nginx configuration for serving the application
+- **HTTPS Termination**: nginx handles SSL/TLS using ACME certificates
+- **Automatic Setup Script**: One-command nginx configuration
+- **Security Headers**: Built-in security headers and best practices
+- **Static File Optimization**: Caching and performance optimization
+
+📖 **See [NGINX-README.md](./NGINX-README.md) for nginx setup instructions.**
+
 📖 **See [ACME-README.md](./ACME-README.md) for detailed ACME setup and usage instructions.**
 
 - 🔄 **Manual & Automatic Checks**: Check certificates on-demand or automatically at intervals
