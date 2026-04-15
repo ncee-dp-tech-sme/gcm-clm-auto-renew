@@ -1,5 +1,5 @@
 {
-  "targetUrl": "https://qradar.cool8.nl",
+  "targetUrl": "https://localhost",
   "port": 3000,
   "checkIntervalMinutes": 60
 }
