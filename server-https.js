@@ -174,7 +174,25 @@ app.post('/api/check-certificate', async (req, res) => {
         
         const lastCert = data.certificates.length > 0 ? data.certificates[0] : null;
         
-        if (hasCertificateChanged(newCert, lastCert)) {
+        // Check if URL has changed by comparing the common name or subject
+        const urlChanged = lastCert && (
+            newCert.subject.commonName !== lastCert.subject.commonName ||
+            newCert.issuer.commonName !== lastCert.issuer.commonName
+        );
+        
+        if (urlChanged) {
+            console.log('URL has changed - clearing old certificates and saving new one');
+            data.certificates = [newCert];
+            writeCertificates(data);
+            
+            res.json({
+                success: true,
+                changed: true,
+                message: 'New URL detected - certificate saved',
+                certificate: newCert,
+                certificates: data.certificates
+            });
+        } else if (hasCertificateChanged(newCert, lastCert)) {
             console.log('Certificate has changed! Saving new certificate.');
             
             data.certificates.unshift(newCert);
@@ -193,6 +211,15 @@ app.post('/api/check-certificate', async (req, res) => {
             });
         } else {
             console.log('Certificate unchanged.');
+            // Even though unchanged, update the first certificate with fresh data
+            // This ensures the UI always shows current certificate details
+            if (data.certificates.length > 0) {
+                data.certificates[0] = newCert;
+            } else {
+                // If no certificates in storage, add the new one
+                data.certificates.push(newCert);
+            }
+            
             res.json({
                 success: true,
                 changed: false,
