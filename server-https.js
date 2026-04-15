@@ -8,7 +8,14 @@ const { URL } = require('url');
 const VaultPkiManager = require('./vault-pki-manager');
 
 const app = express();
-const config = require('./config.json');
+let config = require('./config.json');
+
+// Helper function to reload config from disk
+function reloadConfig() {
+    delete require.cache[require.resolve('./config.json')];
+    config = require('./config.json');
+    return config;
+}
 
 // Use /app/data for persistent storage in Docker, fallback to current directory
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -159,6 +166,8 @@ app.get('/api/certificates', async (req, res) => {
 
 app.post('/api/check-certificate', async (req, res) => {
     try {
+        // Reload config to get latest targetUrl
+        reloadConfig();
         console.log(`Checking certificate for: ${config.targetUrl}`);
         const newCert = await fetchCertificate(config.targetUrl);
         const data = readCertificates();
