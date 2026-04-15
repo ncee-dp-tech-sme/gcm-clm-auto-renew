@@ -57,7 +57,7 @@ fi
 # Unseal Vault
 echo ""
 echo "Unsealing Vault..."
-vault operator unseal "$UNSEAL_KEY"
+echo "$UNSEAL_KEY" | vault operator unseal -
 
 # Set root token for subsequent commands
 export VAULT_TOKEN="$ROOT_TOKEN"
