@@ -200,6 +200,77 @@ app.get('/api/config', (req, res) => {
     });
 });
 
+// API endpoint to update configuration
+app.post('/api/config', (req, res) => {
+    try {
+        const { targetUrl } = req.body;
+        
+        if (!targetUrl) {
+            return res.status(400).json({
+                success: false,
+                error: 'Target URL is required'
+            });
+        }
+        
+        // Validate URL
+        try {
+            new URL(targetUrl);
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid URL format'
+            });
+        }
+        
+        if (!targetUrl.startsWith('https://')) {
+            return res.status(400).json({
+                success: false,
+                error: 'URL must start with https://'
+            });
+        }
+        
+        // Update config
+        config.targetUrl = targetUrl;
+        fs.writeFileSync(
+            path.join(__dirname, 'config.json'),
+            JSON.stringify(config, null, 2)
+        );
+        
+        console.log(`Target URL updated to: ${targetUrl}`);
+        
+        res.json({
+            success: true,
+            targetUrl: config.targetUrl
+        });
+    } catch (error) {
+        console.error('Error updating config:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API endpoint to delete certificates (clear history)
+app.delete('/api/certificates', (req, res) => {
+    try {
+        const data = { certificates: [] };
+        writeCertificates(data);
+        console.log('Certificate history cleared');
+        
+        res.json({
+            success: true,
+            message: 'Certificate history cleared'
+        });
+    } catch (error) {
+        console.error('Error clearing certificates:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Initialize and start server
 initCertificatesFile();
 

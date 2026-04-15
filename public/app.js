@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set up event listeners
     document.getElementById('checkNowBtn').addEventListener('click', checkCertificateNow);
+    document.getElementById('updateUrlBtn').addEventListener('click', updateTargetUrl);
+    document.getElementById('clearStorageBtn').addEventListener('click', clearStorage);
 });
 
 // Load configuration
@@ -18,10 +20,81 @@ async function loadConfig() {
         const response = await fetch('/api/config');
         const data = await response.json();
         targetUrl = data.targetUrl;
-        document.getElementById('targetUrl').textContent = targetUrl;
+        document.getElementById('urlInput').value = targetUrl;
     } catch (error) {
         console.error('Error loading config:', error);
         showStatus('Error loading configuration', 'error');
+    }
+}
+
+// Update target URL
+async function updateTargetUrl() {
+    const newUrl = document.getElementById('urlInput').value.trim();
+    
+    if (!newUrl) {
+        showStatus('Please enter a valid URL', 'error');
+        return;
+    }
+    
+    // Validate URL format
+    try {
+        new URL(newUrl);
+    } catch (error) {
+        showStatus('Invalid URL format. Please use format: https://www.example.com', 'error');
+        return;
+    }
+    
+    if (!newUrl.startsWith('https://')) {
+        showStatus('URL must start with https://', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ targetUrl: newUrl })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            targetUrl = newUrl;
+            showStatus('✅ Target URL updated successfully! Click "Check Certificate" to fetch the new certificate.', 'success');
+        } else {
+            showStatus('Error updating URL: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating URL:', error);
+        showStatus('Error connecting to server', 'error');
+    }
+}
+
+// Clear storage (certificates history)
+async function clearStorage() {
+    if (!confirm('Are you sure you want to clear all certificate history? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/certificates', {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            certificates = [];
+            displayCertificates();
+            showStatus('✅ Certificate history cleared successfully!', 'success');
+        } else {
+            showStatus('Error clearing history: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing storage:', error);
+        showStatus('Error connecting to server', 'error');
     }
 }
 
@@ -37,7 +110,7 @@ async function loadCertificates() {
         if (data.success) {
             certificates = data.certificates;
             targetUrl = data.targetUrl;
-            document.getElementById('targetUrl').textContent = targetUrl;
+            document.getElementById('urlInput').value = targetUrl;
             displayCertificates();
             updateLastUpdated();
         } else {

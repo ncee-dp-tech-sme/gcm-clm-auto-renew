@@ -14,12 +14,26 @@
         </header>
 
         <div class="controls">
-            <div class="target-url">
-                <strong>Monitoring:</strong> <span id="targetUrl">Loading...</span>
+            <div class="url-input-group">
+                <label for="urlInput"><strong>Target URL:</strong></label>
+                <input
+                    type="text"
+                    id="urlInput"
+                    placeholder="https://www.example.com"
+                    class="url-input"
+                />
+                <button id="updateUrlBtn" class="btn-secondary">
+                    <span class="btn-icon">💾</span> Update URL
+                </button>
             </div>
-            <button id="checkNowBtn" class="btn-primary">
-                <span class="btn-icon">🔄</span> Check Certificate Now
-            </button>
+            <div class="button-group">
+                <button id="checkNowBtn" class="btn-primary">
+                    <span class="btn-icon">🔄</span> Check Certificate
+                </button>
+                <button id="clearStorageBtn" class="btn-danger">
+                    <span class="btn-icon">🗑️</span> Clear History
+                </button>
+            </div>
         </div>
 
         <div id="statusMessage" class="status-message"></div>
