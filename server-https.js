@@ -5,7 +5,7 @@ const tls = require('tls');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
-const AcmeClientManager = require('./acme-client-manager');
+const VaultPkiManager = require('./vault-pki-manager');
 
 const app = express();
 const config = require('./config.json');
@@ -17,8 +17,8 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 const CERT_FILE = path.join(DATA_DIR, 'certificates.json');
 
-// Initialize ACME client manager
-const acmeManager = new AcmeClientManager();
+// Initialize Vault PKI manager
+const vaultPkiManager = new VaultPkiManager();
 
 // Middleware
 app.use(express.json());
@@ -275,17 +275,17 @@ app.delete('/api/certificates', (req, res) => {
     }
 });
 
-// ACME API endpoints
+// Vault PKI API endpoints
 app.get('/api/acme/config', (req, res) => {
     try {
-        const status = acmeManager.getStatus();
+        const status = vaultPkiManager.getStatus();
         res.json({
             success: true,
-            config: acmeManager.config,
+            config: vaultPkiManager.config,
             status: status
         });
     } catch (error) {
-        console.error('Error getting ACME config:', error);
+        console.error('Error getting Vault PKI config:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -295,13 +295,13 @@ app.get('/api/acme/config', (req, res) => {
 
 app.post('/api/acme/config', (req, res) => {
     try {
-        const success = acmeManager.saveConfig(req.body);
+        const success = vaultPkiManager.saveConfig(req.body);
         
         if (success) {
-            const status = acmeManager.getStatus();
+            const status = vaultPkiManager.getStatus();
             res.json({
                 success: true,
-                config: acmeManager.config,
+                config: vaultPkiManager.config,
                 status: status
             });
         } else {
@@ -321,7 +321,7 @@ app.post('/api/acme/config', (req, res) => {
 
 app.post('/api/acme/test', async (req, res) => {
     try {
-        const result = await acmeManager.testConfiguration();
+        const result = await vaultPkiManager.testConfiguration();
         res.json(result);
     } catch (error) {
         console.error('Error testing ACME config:', error);
@@ -335,9 +335,9 @@ app.post('/api/acme/test', async (req, res) => {
 app.post('/api/acme/obtain-certificate', async (req, res) => {
     try {
         console.log('Starting certificate obtainment...');
-        const result = await acmeManager.obtainCertificate();
+        const result = await vaultPkiManager.obtainCertificate();
         
-        const status = acmeManager.getStatus();
+        const status = vaultPkiManager.getStatus();
         
         res.json({
             success: true,
@@ -367,22 +367,22 @@ const HTTP_PORT = config.port || 3000;
 const HTTPS_PORT = 3443;
 
 // Check if ACME certificates exist
-const acmeConfig = acmeManager.config;
-const hasAcmeCertificates = acmeManager.certificateExists();
+const vaultConfig = vaultPkiManager.config;
+const hasCertificates = vaultPkiManager.certificateExists();
 
-if (hasAcmeCertificates) {
+if (hasCertificates) {
     // Start HTTPS server with ACME certificates
     try {
         const httpsOptions = {
-            key: fs.readFileSync(acmeConfig.privateKeyPath),
-            cert: fs.readFileSync(acmeConfig.certificatePath)
+            key: fs.readFileSync(vaultConfig.privateKeyPath),
+            cert: fs.readFileSync(vaultConfig.certificatePath)
         };
         
         const httpsServer = https.createServer(httpsOptions, app);
         httpsServer.listen(HTTPS_PORT, () => {
             console.log(`✅ HTTPS Server running on https://localhost:${HTTPS_PORT}`);
-            console.log(`Certificate domain: ${acmeConfig.domain}`);
-            const certInfo = acmeManager.getCertificateInfo();
+            console.log(`Certificate common name: ${vaultConfig.commonName}`);
+            const certInfo = vaultPkiManager.getCertificateInfo();
             if (certInfo) {
                 console.log(`Certificate expires: ${certInfo.notAfter} (${certInfo.daysRemaining} days remaining)`);
             }
@@ -409,31 +409,36 @@ function startHttpOnly() {
     httpServer.listen(HTTP_PORT, () => {
         console.log(`HTTP Server running on http://localhost:${HTTP_PORT}`);
         console.log(`Monitoring: ${config.targetUrl}`);
-        console.log(`⚠️  No ACME certificates found. Configure ACME to enable HTTPS.`);
+        console.log(`⚠️  No certificates found. Use Vault PKI to obtain certificates.`);
     });
 }
 
-// Automatic certificate check interval
-if (acmeConfig.checkIntervalMinutes > 0) {
+// Automatic certificate check interval (only for renewal, not initial obtainment)
+if (vaultConfig.checkIntervalMinutes > 0) {
     setInterval(async () => {
         try {
-            console.log('\n--- Automatic ACME certificate check ---');
+            console.log('\n--- Automatic Vault PKI certificate check ---');
             
-            if (acmeManager.needsRenewal()) {
-                console.log('Certificate needs renewal. Obtaining new certificate...');
-                await acmeManager.obtainCertificate();
-                console.log('Certificate renewed successfully. Restart required.');
-                // In production, you would restart the server here
+            // Only attempt renewal if certificate exists
+            if (vaultPkiManager.certificateExists()) {
+                if (vaultPkiManager.needsRenewal()) {
+                    console.log('Certificate needs renewal. Obtaining new certificate...');
+                    await vaultPkiManager.obtainCertificate();
+                    console.log('Certificate renewed successfully. Restart required.');
+                    // In production, you would restart the server here
+                } else {
+                    console.log('Certificate is still valid.');
+                }
             } else {
-                console.log('Certificate is still valid.');
+                console.log('No certificate found. Use the Vault PKI page to obtain one.');
             }
             
         } catch (error) {
-            console.error('Error in automatic ACME check:', error.message);
+            console.error('Error in automatic certificate check:', error.message);
         }
-    }, acmeConfig.checkIntervalMinutes * 60 * 1000);
+    }, vaultConfig.checkIntervalMinutes * 60 * 1000);
     
-    console.log(`ACME certificate check interval: ${acmeConfig.checkIntervalMinutes} minutes`);
+    console.log(`Certificate check interval: ${vaultConfig.checkIntervalMinutes} minutes`);
 }
 
 // Periodic certificate monitoring check (original feature)

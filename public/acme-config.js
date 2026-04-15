@@ -103,8 +103,8 @@ async function saveConfiguration() {
         return;
     }
     
-    if (!acmeDirectoryUrl.startsWith('https://')) {
-        showStatus('ACME URL must start with https://', 'error');
+    if (!acmeDirectoryUrl.startsWith('https://') && !acmeDirectoryUrl.startsWith('http://')) {
+        showStatus('ACME URL must start with http:// or https://', 'error');
         return;
     }
     

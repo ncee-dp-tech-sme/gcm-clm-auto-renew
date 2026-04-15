@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault PKI Configuration - Certificate Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Vault PKI Configuration</h1>
+            <p class="subtitle">Manage certificates using HashiCorp Vault</p>
+        </header>
+
+        <nav class="navigation">
+            <a href="/" class="nav-link">← Back to Certificate Monitor</a>
+        </nav>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="config-container">
+            <div class="config-section">
+                <h2>📋 Certificate Configuration</h2>
+                <div class="form-group">
+                    <label for="commonName">Common Name *</label>
+                    <input 
+                        type="text" 
+                        id="commonName" 
+                        placeholder="localhost"
+                        class="form-input"
+                        required
+                    />
+                    <small>The common name for the certificate (e.g., localhost, example.com)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="vaultAddr">Vault Address</label>
+                    <input 
+                        type="text" 
+                        id="vaultAddr" 
+                        placeholder="http://vault:8200"
+                        class="form-input"
+                        readonly
+                    />
+                    <small>Vault server address (configured automatically)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="roleName">Vault PKI Role</label>
+                    <input 
+                        type="text" 
+                        id="roleName" 
+                        placeholder="localhost"
+                        class="form-input"
+                        readonly
+                    />
+                    <small>The Vault PKI role to use for certificate issuance</small>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h2>📊 Current Status</h2>
+                <div id="statusInfo" class="status-info">
+                    <p>Loading status...</p>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h2>⚙️ Actions</h2>
+                <div class="button-group">
+                    <button id="saveConfigBtn" class="btn btn-primary">
+                        💾 Save Configuration
+                    </button>
+                    <button id="obtainCertBtn" class="btn btn-success">
+                        🎫 Obtain Certificate
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>ℹ️ About Vault PKI</h3>
+            <p>This application uses HashiCorp Vault's PKI secrets engine to issue and manage certificates.</p>
+            <ul>
+                <li>Certificates are issued directly from Vault without ACME protocol</li>
+                <li>Automatic renewal is supported (checks every 3 minutes)</li>
+                <li>Certificates are valid for 30 days by default</li>
+                <li>Vault authentication is handled automatically using the root token</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="vault-pki-config.js"></script>
+</body>
+</html>

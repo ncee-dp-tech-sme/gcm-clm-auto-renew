@@ -63,26 +63,33 @@ class AcmeClientManager {
     // Initialize ACME client
     async initializeClient() {
         try {
+            console.log('Initializing ACME client with directory URL:', this.config.acmeDirectoryUrl);
+            
             // Load or create account key
             if (fs.existsSync(this.config.accountKeyPath)) {
                 this.accountKey = fs.readFileSync(this.config.accountKeyPath);
-                console.log('Loaded existing ACME account key');
+                console.log('Loaded existing ACME account key from:', this.config.accountKeyPath);
             } else {
+                console.log('Creating new ACME account key...');
                 this.accountKey = await acme.crypto.createPrivateKey();
                 fs.writeFileSync(this.config.accountKeyPath, this.accountKey);
-                console.log('Created new ACME account key');
+                console.log('Created new ACME account key at:', this.config.accountKeyPath);
             }
 
-            // Create ACME client
+            // Create ACME client with additional options for better compatibility
             this.client = new acme.Client({
                 directoryUrl: this.config.acmeDirectoryUrl,
-                accountKey: this.accountKey
+                accountKey: this.accountKey,
+                backoffAttempts: 5,
+                backoffMin: 2000,
+                backoffMax: 30000
             });
 
-            console.log('ACME client initialized');
+            console.log('ACME client initialized successfully');
             return true;
         } catch (error) {
             console.error('Error initializing ACME client:', error);
+            console.error('Error stack:', error.stack);
             throw error;
         }
     }
@@ -96,9 +103,13 @@ class AcmeClientManager {
 
             await this.initializeClient();
             
-            // Try to get directory
-            const directory = await this.client.getDirectory();
-            console.log('ACME directory accessible:', directory);
+            // Test by trying to create/get account (this will verify ACME server connectivity)
+            const account = await this.client.createAccount({
+                termsOfServiceAgreed: true,
+                contact: [`mailto:${this.config.email}`]
+            });
+            
+            console.log('ACME server accessible, account verified');
 
             return {
                 success: true,
@@ -135,15 +146,22 @@ class AcmeClientManager {
     async obtainCertificate() {
         try {
             console.log('Starting certificate obtainment process...');
+            console.log('ACME Directory URL:', this.config.acmeDirectoryUrl);
+            console.log('Domain:', this.config.domain);
+            console.log('Email:', this.config.email);
 
             if (!this.config.email || !this.config.domain) {
                 throw new Error('Email and domain must be configured');
             }
 
+            console.log('Initializing ACME client...');
             await this.initializeClient();
+            console.log('ACME client initialized');
 
             // Create account if needed
+            console.log('Creating/retrieving ACME account...');
             await this.createAccount();
+            console.log('ACME account ready');
 
             // Create private key for certificate
             const [certificateKey, certificateRequest] = await acme.crypto.createCsr({
