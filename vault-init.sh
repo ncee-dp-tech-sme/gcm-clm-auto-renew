@@ -10,15 +10,23 @@ echo "==================================="
 
 # Wait for Vault to be ready
 echo "Waiting for Vault to be ready..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+
 until vault status > /dev/null 2>&1; do
-    echo "Vault is not ready yet, waiting..."
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+        echo "ERROR: Vault did not become ready after $MAX_RETRIES attempts"
+        exit 1
+    fi
+    echo "Vault is not ready yet, waiting... (attempt $RETRY_COUNT/$MAX_RETRIES)"
     sleep 2
 done
 
 echo "Vault is ready!"
 
 # Check if already initialized
-if vault secrets list | grep -q "pki/"; then
+if vault secrets list 2>/dev/null | grep -q "pki/"; then
     echo "PKI secrets engine already enabled. Skipping initialization."
     exit 0
 fi
