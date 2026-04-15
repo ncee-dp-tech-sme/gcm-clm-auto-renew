@@ -8,22 +8,22 @@ echo "==================================="
 echo "Vault ACME Initialization Script"
 echo "==================================="
 
-# Wait for Vault to be ready
-echo "Waiting for Vault to be ready..."
+# Wait for Vault API to be accessible (not necessarily initialized)
+echo "Waiting for Vault API to be accessible..."
 MAX_RETRIES=30
 RETRY_COUNT=0
 
-until wget -q --spider http://vault:8200/v1/sys/health 2>/dev/null; do
+until wget -q --spider http://vault:8200/v1/sys/health?uninitcode=200&sealedcode=200 2>/dev/null; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-        echo "ERROR: Vault did not become ready after $MAX_RETRIES attempts"
+        echo "ERROR: Vault API did not become accessible after $MAX_RETRIES attempts"
         exit 1
     fi
-    echo "Vault is not ready yet, waiting... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+    echo "Vault API not accessible yet, waiting... (attempt $RETRY_COUNT/$MAX_RETRIES)"
     sleep 2
 done
 
-echo "Vault is ready!"
+echo "Vault API is accessible!"
 
 # Check if Vault is initialized
 if ! vault status 2>/dev/null | grep -q "Initialized.*true"; then
