@@ -1,12 +1,24 @@
-# SSL/TLS Certificate Monitor
+# SSL/TLS Certificate Monitor with ACME Support
 
-A simple web application that monitors SSL/TLS certificates for a configured domain and tracks certificate changes over time. The application displays current and previous certificates side-by-side for easy comparison.
+A comprehensive web application that monitors SSL/TLS certificates and provides automatic certificate management using the ACME protocol (Let's Encrypt). The application displays current and previous certificates side-by-side for easy comparison and can automatically obtain and renew its own SSL/TLS certificates.
 
 ## Features
 
 - 🔒 **Certificate Monitoring**: Fetches and displays detailed SSL/TLS certificate information
 - 📊 **Side-by-Side Comparison**: Shows current and previous certificates for easy comparison
 - 💾 **Automatic Storage**: Saves certificate history to track changes over time
+
+## 🆕 New ACME Features
+
+- **Automatic Certificate Management**: Obtain SSL/TLS certificates automatically using ACME protocol
+- **HTTPS Server**: Serve the application over HTTPS with auto-obtained certificates
+- **Auto-Renewal**: Certificates are automatically renewed before expiration
+- **3-Minute Check Interval**: Configurable automatic certificate checking
+- **Web-Based ACME Configuration**: Configure ACME settings through a user-friendly interface
+- **Let's Encrypt Integration**: Full support for Let's Encrypt (staging and production)
+
+📖 **See [ACME-README.md](./ACME-README.md) for detailed ACME setup and usage instructions.**
+
 - 🔄 **Manual & Automatic Checks**: Check certificates on-demand or automatically at intervals
 - 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
 - ⚡ **Real-time Updates**: Instant feedback when certificates change

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACME Configuration - Certificate Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 ACME Configuration</h1>
+            <p class="subtitle">Configure automatic certificate management</p>
+        </header>
+
+        <nav class="navigation">
+            <a href="/" class="nav-link">← Back to Certificate Monitor</a>
+        </nav>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="config-container">
+            <div class="config-section">
+                <h2>📧 Account Information</h2>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        placeholder="your-email@example.com"
+                        class="form-input"
+                        required
+                    />
+                    <small>Used for important account notifications and recovery</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="domain">Domain Name *</label>
+                    <input 
+                        type="text" 
+                        id="domain" 
+                        placeholder="example.com"
+                        class="form-input"
+                        required
+                    />
+                    <small>The domain for which to obtain certificates</small>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h2>🌐 ACME Server</h2>
+                <div class="form-group">
+                    <label for="acmeDirectoryUrl">ACME Directory URL *</label>
+                    <select id="acmeDirectoryUrl" class="form-input">
+                        <option value="https://acme-staging-v02.api.letsencrypt.org/directory">Let's Encrypt Staging (Testing)</option>
+                        <option value="https://acme-v02.api.letsencrypt.org/directory">Let's Encrypt Production</option>
+                        <option value="custom">Custom ACME Server</option>
+                    </select>
+                    <small>Use staging for testing to avoid rate limits</small>
+                </div>
+
+                <div class="form-group" id="customUrlGroup" style="display: none;">
+                    <label for="customAcmeUrl">Custom ACME URL</label>
+                    <input 
+                        type="text" 
+                        id="customAcmeUrl" 
+                        placeholder="https://your-acme-server.com/directory"
+                        class="form-input"
+                    />
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h2>🔧 Challenge Configuration</h2>
+                <div class="form-group">
+                    <label for="challengeType">Challenge Type</label>
+                    <select id="challengeType" class="form-input">
+                        <option value="http-01">HTTP-01 (Recommended)</option>
+                        <option value="dns-01">DNS-01</option>
+                    </select>
+                    <small>HTTP-01 requires port 80 access, DNS-01 requires DNS API access</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkInterval">Certificate Check Interval (minutes)</label>
+                    <input 
+                        type="number" 
+                        id="checkInterval" 
+                        value="3"
+                        min="1"
+                        max="1440"
+                        class="form-input"
+                    />
+                    <small>How often to check for certificate updates (default: 3 minutes)</small>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h2>📊 Current Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">ACME Account:</span>
+                        <span id="accountStatus" class="status-value">Not configured</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Certificate:</span>
+                        <span id="certificateStatus" class="status-value">Not obtained</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Last Check:</span>
+                        <span id="lastCheck" class="status-value">Never</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Next Check:</span>
+                        <span id="nextCheck" class="status-value">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group-center">
+                <button id="saveConfigBtn" class="btn-primary">
+                    <span class="btn-icon">💾</span> Save Configuration
+                </button>
+                <button id="testConfigBtn" class="btn-secondary">
+                    <span class="btn-icon">🧪</span> Test Configuration
+                </button>
+                <button id="obtainCertBtn" class="btn-success">
+                    <span class="btn-icon">🔐</span> Obtain Certificate Now
+                </button>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>ℹ️ Important Information</h3>
+            <ul>
+                <li><strong>Staging vs Production:</strong> Always test with Let's Encrypt Staging first to avoid hitting rate limits</li>
+                <li><strong>Domain Validation:</strong> Your domain must point to this server's IP address</li>
+                <li><strong>Port Requirements:</strong> HTTP-01 challenge requires port 80 to be accessible</li>
+                <li><strong>Automatic Renewal:</strong> Certificates will be automatically checked and renewed</li>
+                <li><strong>Certificate Validity:</strong> Let's Encrypt certificates are valid for 90 days</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="acme-config.js"></script>
+</body>
+</html>

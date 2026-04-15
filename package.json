@@ -2,10 +2,11 @@
   "name": "certificate-monitor",
   "version": "1.0.0",
   "description": "SSL/TLS Certificate Monitor - Track and compare certificate changes",
-  "main": "server.js",
+  "main": "server-https.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server-https.js",
+    "dev": "node server-https.js",
+    "start-http": "node server.js"
   },
   "keywords": [
     "ssl",
@@ -17,7 +18,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "acme-client": "^5.3.1"
   },
   "engines": {
     "node": ">=14.0.0"

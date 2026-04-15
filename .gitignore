@@ -4,6 +4,15 @@ node_modules/
 # Certificate storage (contains sensitive data)
 certificates.json
 
+# ACME certificates and keys (SENSITIVE - DO NOT COMMIT)
+acme-account-key.pem
+acme-certificate.pem
+acme-private-key.pem
+acme-config.json
+
+# ACME challenge files
+public/.well-known/
+
 # Environment variables
 .env
 .env.local
