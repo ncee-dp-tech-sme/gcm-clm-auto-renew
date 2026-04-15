@@ -140,6 +140,10 @@ async function checkCertificateNow() {
             }
         });
         
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
@@ -150,14 +154,14 @@ async function checkCertificateNow() {
             if (data.changed) {
                 showStatus('✅ New certificate detected and saved!', 'success');
             } else {
-                showStatus('ℹ️ Certificate unchanged - no updates needed', 'info');
+                showStatus('ℹ️ Certificate Unchanged', 'info');
             }
         } else {
             showStatus('Error checking certificate: ' + data.error, 'error');
         }
     } catch (error) {
         console.error('Error checking certificate:', error);
-        showStatus('Error connecting to server', 'error');
+        showStatus('Error: ' + (error.message || 'Unable to connect to server'), 'error');
     } finally {
         showLoading(false);
         button.disabled = false;
