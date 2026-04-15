@@ -325,8 +325,13 @@ function showLoading(show) {
 // Show status message
 function showStatus(message, type) {
     const statusEl = document.getElementById('statusMessage');
+    if (!statusEl) {
+        console.error('Status message element not found');
+        return;
+    }
     statusEl.textContent = message;
     statusEl.className = `status-message ${type}`;
+    statusEl.style.display = 'block';
     
     // Auto-hide after 5 seconds
     setTimeout(() => {
@@ -337,7 +342,11 @@ function showStatus(message, type) {
 // Hide status message
 function hideStatus() {
     const statusEl = document.getElementById('statusMessage');
+    if (!statusEl) {
+        return;
+    }
     statusEl.className = 'status-message';
+    statusEl.style.display = 'none';
 }
 
 // Update last updated time
