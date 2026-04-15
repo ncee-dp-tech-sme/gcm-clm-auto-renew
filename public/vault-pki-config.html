@@ -30,24 +30,25 @@
                         class="form-input"
                         readonly
                     />
-                    <small>HashiCorp Vault server address</small>
+                    <small>Current Vault server address in use</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="displayVaultToken">Vault Root Token</label>
+                    <label for="vaultToken">Vault Token</label>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input
                             type="password"
-                            id="displayVaultToken"
+                            id="vaultToken"
                             class="form-input"
-                            readonly
                             style="flex: 1;"
+                            placeholder="Enter Vault token"
+                            autocomplete="off"
                         />
-                        <button id="toggleTokenBtn" class="btn btn-secondary" style="min-width: 100px;">
+                        <button type="button" id="toggleTokenBtn" class="btn btn-secondary" style="min-width: 100px;">
                             👁️ Show
                         </button>
                     </div>
-                    <small>Authentication token for Vault API access</small>
+                    <small>Authentication token for Vault API access. Leave blank to keep the current saved token or use environment/file token sources.</small>
                 </div>
             </div>
 
@@ -66,27 +67,38 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="vaultAddr">Vault Address</label>
-                    <input 
-                        type="text" 
-                        id="vaultAddr" 
-                        placeholder="http://vault:8200"
+                    <label for="vaultAddr">Vault Address *</label>
+                    <input
+                        type="text"
+                        id="vaultAddr"
+                        placeholder="https://vault.example.com:8200"
                         class="form-input"
-                        readonly
+                        required
                     />
-                    <small>Vault server address (configured automatically)</small>
+                    <small>Vault server address for an existing Vault instance</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="roleName">Vault PKI Role</label>
-                    <input 
-                        type="text" 
-                        id="roleName" 
+                    <label for="pkiPath">Vault PKI Path</label>
+                    <input
+                        type="text"
+                        id="pkiPath"
+                        placeholder="pki"
+                        class="form-input"
+                    />
+                    <small>The mounted Vault PKI secrets engine path</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="roleName">Vault PKI Role *</label>
+                    <input
+                        type="text"
+                        id="roleName"
                         placeholder="localhost"
                         class="form-input"
-                        readonly
+                        required
                     />
-                    <small>The Vault PKI role to use for certificate issuance</small>
+                    <small>The Vault PKI role to use for certificate issuance on the target Vault server</small>
                 </div>
             </div>
 
@@ -102,6 +114,9 @@
                 <div class="button-group">
                     <button id="saveConfigBtn" class="btn btn-primary">
                         💾 Save Configuration
+                    </button>
+                    <button id="restoreDefaultBtn" class="btn btn-secondary">
+                        ↩️ Restore Default
                     </button>
                     <button id="obtainCertBtn" class="btn btn-success">
                         🎫 Obtain New Certificate
@@ -123,7 +138,9 @@
                 <li>Certificates are issued directly from Vault without ACME protocol</li>
                 <li>Automatic renewal is supported (checks every 3 minutes)</li>
                 <li>Certificates are valid for 30 days by default</li>
-                <li>Vault authentication is handled automatically using the root token</li>
+                <li>Vault connection can be pointed to another existing Vault server</li>
+                <li>When switching away from the default Vault setup, the original config is backed up for restore</li>
+                <li>Vault authentication is handled automatically using the configured token source</li>
             </ul>
         </div>
     </div>

@@ -63,6 +63,35 @@ function writeCertificates(data) {
     }
 }
 
+function buildCertDetails(cert, url) {
+    return {
+        subject: {
+            commonName: cert.subject?.CN || 'N/A',
+            organization: cert.subject?.O || 'N/A',
+            organizationalUnit: cert.subject?.OU || 'N/A',
+            locality: cert.subject?.L || 'N/A',
+            state: cert.subject?.ST || 'N/A',
+            country: cert.subject?.C || 'N/A'
+        },
+        issuer: {
+            commonName: cert.issuer?.CN || 'N/A',
+            organization: cert.issuer?.O || 'N/A',
+            country: cert.issuer?.C || 'N/A'
+        },
+        validFrom: cert.valid_from,
+        validTo: cert.valid_to,
+        serialNumber: cert.serialNumber,
+        fingerprint: cert.fingerprint,
+        fingerprint256: cert.fingerprint256,
+        subjectAltNames: cert.subjectaltname || 'N/A',
+        bits: cert.bits,
+        exponent: cert.exponent,
+        pubkey: cert.pubkey ? cert.pubkey.toString('base64').substring(0, 50) + '...' : 'N/A',
+        fetchedAt: new Date().toISOString(),
+        url: url
+    };
+}
+
 // Fetch certificate details from a URL
 function fetchCertificate(url) {
     return new Promise((resolve, reject) => {
@@ -70,65 +99,68 @@ function fetchCertificate(url) {
             const parsedUrl = new URL(url);
             const hostname = parsedUrl.hostname;
             const port = parsedUrl.port || 443;
+            const isLocalhost = hostname === 'localhost';
+            const connectionHosts = isLocalhost ? ['127.0.0.1', '::1'] : [hostname];
 
-            const options = {
-                host: hostname,
-                port: port,
-                method: 'GET',
-                rejectUnauthorized: false,
-                agent: false
-            };
+            let lastError = null;
 
-            const req = https.request(options, (res) => {
-                const cert = res.socket.getPeerCertificate(true);
-                
-                if (!cert || Object.keys(cert).length === 0) {
-                    reject(new Error('No certificate found'));
+            const tryConnection = (index) => {
+                if (index >= connectionHosts.length) {
+                    reject(lastError || new Error('Unable to connect to target host'));
                     return;
                 }
 
-                const certDetails = {
-                    subject: {
-                        commonName: cert.subject?.CN || 'N/A',
-                        organization: cert.subject?.O || 'N/A',
-                        organizationalUnit: cert.subject?.OU || 'N/A',
-                        locality: cert.subject?.L || 'N/A',
-                        state: cert.subject?.ST || 'N/A',
-                        country: cert.subject?.C || 'N/A'
-                    },
-                    issuer: {
-                        commonName: cert.issuer?.CN || 'N/A',
-                        organization: cert.issuer?.O || 'N/A',
-                        country: cert.issuer?.C || 'N/A'
-                    },
-                    validFrom: cert.valid_from,
-                    validTo: cert.valid_to,
-                    serialNumber: cert.serialNumber,
-                    fingerprint: cert.fingerprint,
-                    fingerprint256: cert.fingerprint256,
-                    subjectAltNames: cert.subjectaltname || 'N/A',
-                    bits: cert.bits,
-                    exponent: cert.exponent,
-                    pubkey: cert.pubkey ? cert.pubkey.toString('base64').substring(0, 50) + '...' : 'N/A',
-                    fetchedAt: new Date().toISOString(),
-                    url: url
+                const connectHost = connectionHosts[index];
+                const options = {
+                    host: connectHost,
+                    servername: hostname,
+                    port: port,
+                    method: 'GET',
+                    rejectUnauthorized: false,
+                    agent: false
                 };
 
-                resolve(certDetails);
-                req.abort();
-            });
+                const req = https.request(options, (res) => {
+                    const cert = res.socket.getPeerCertificate(true);
+                    
+                    if (!cert || Object.keys(cert).length === 0) {
+                        reject(new Error('No certificate found'));
+                        return;
+                    }
 
-            req.on('error', (error) => {
-                reject(error);
-            });
+                    resolve(buildCertDetails(cert, url));
+                    req.abort();
+                });
 
-            req.on('timeout', () => {
-                req.abort();
-                reject(new Error('Request timeout'));
-            });
+                req.on('error', (error) => {
+                    lastError = error;
 
-            req.setTimeout(10000);
-            req.end();
+                    if (
+                        isLocalhost &&
+                        ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH'].includes(error.code)
+                    ) {
+                        tryConnection(index + 1);
+                        return;
+                    }
+
+                    reject(error);
+                });
+
+                req.on('timeout', () => {
+                    req.abort();
+                    lastError = new Error('Request timeout');
+                    if (isLocalhost) {
+                        tryConnection(index + 1);
+                        return;
+                    }
+                    reject(lastError);
+                });
+
+                req.setTimeout(10000);
+                req.end();
+            };
+
+            tryConnection(0);
 
         } catch (error) {
             reject(error);
@@ -355,6 +387,32 @@ app.post('/api/acme/config', (req, res) => {
     }
 });
 
+app.post('/api/acme/config/restore-default', (req, res) => {
+    try {
+        const success = vaultPkiManager.restoreDefaultConfig();
+        
+        if (success) {
+            const status = vaultPkiManager.getStatus();
+            res.json({
+                success: true,
+                config: vaultPkiManager.config,
+                status: status
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to restore default configuration'
+            });
+        }
+    } catch (error) {
+        console.error('Error restoring Vault PKI config:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+ 
 app.post('/api/acme/test', async (req, res) => {
     try {
         const result = await vaultPkiManager.testConfiguration();

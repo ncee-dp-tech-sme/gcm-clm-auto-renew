@@ -11,6 +11,7 @@ class VaultPkiManager {
         }
         
         this.configPath = configPath || path.join(DATA_DIR, 'vault-pki-config.json');
+        this.defaultConfigPath = path.join(DATA_DIR, 'vault-pki-config.default.json');
         this.config = this.loadConfig();
     }
 
@@ -20,10 +21,8 @@ class VaultPkiManager {
                 const data = fs.readFileSync(this.configPath, 'utf8');
                 const config = JSON.parse(data);
                 
-                // Always refresh token from environment/file, never trust saved token
-                const freshToken = this.getFreshToken();
-                if (freshToken) {
-                    config.vaultToken = freshToken;
+                if (!config.vaultToken) {
+                    config.vaultToken = this.getExternalToken();
                 }
                 
                 return config;
@@ -35,9 +34,9 @@ class VaultPkiManager {
         }
     }
 
-    // Helper method to get fresh token from file or environment
+    // Helper method to get token from file or environment
     // Priority: 1. Token file (written by vault-init), 2. Environment variable
-    getFreshToken() {
+    getExternalToken() {
         const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
         let vaultToken = '';
         
@@ -68,7 +67,7 @@ class VaultPkiManager {
         const CERT_DIR = process.env.CERT_DIR || path.join(__dirname, 'certs');
         const VAULT_ADDR = process.env.VAULT_ADDR || 'http://vault:8200';
         
-        const vaultToken = this.getFreshToken();
+        const vaultToken = this.getExternalToken();
         
         if (!vaultToken) {
             console.warn('WARNING: No Vault token found in environment or file');
@@ -86,20 +85,96 @@ class VaultPkiManager {
         };
     }
 
+    isDefaultVaultConfig(config = this.config) {
+        const defaultConfig = this.getDefaultConfig();
+        return (
+            (config.vaultAddr || '') === (defaultConfig.vaultAddr || '') &&
+            (config.pkiPath || '') === (defaultConfig.pkiPath || '') &&
+            (config.roleName || '') === (defaultConfig.roleName || '') &&
+            (config.commonName || '') === (defaultConfig.commonName || '')
+        );
+    }
+
+    backupDefaultConfigIfNeeded() {
+        try {
+            if (fs.existsSync(this.defaultConfigPath)) {
+                return;
+            }
+
+            fs.writeFileSync(this.defaultConfigPath, JSON.stringify(this.config, null, 2));
+            console.log('Saved default Vault PKI config backup');
+        } catch (error) {
+            console.error('Error saving default Vault PKI config backup:', error);
+        }
+    }
+
+    restoreDefaultConfig() {
+        try {
+            let restoredConfig;
+
+            if (fs.existsSync(this.defaultConfigPath)) {
+                restoredConfig = JSON.parse(fs.readFileSync(this.defaultConfigPath, 'utf8'));
+            } else {
+                restoredConfig = this.getDefaultConfig();
+            }
+
+            if (!restoredConfig.vaultToken) {
+                restoredConfig.vaultToken = this.getExternalToken();
+            }
+
+            this.config = restoredConfig;
+            fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+            console.log('Vault PKI configuration restored to default');
+            return true;
+        } catch (error) {
+            console.error('Error restoring default Vault PKI config:', error);
+            return false;
+        }
+    }
+
     saveConfig(newConfig) {
         try {
-            // Merge new config with existing
-            this.config = { ...this.config, ...newConfig };
+            const sanitizedConfig = { ...newConfig };
             
-            // Always refresh the token from environment/file before saving
-            // This ensures we don't save a stale or empty token
-            const freshToken = this.getFreshToken();
-            if (freshToken) {
-                this.config.vaultToken = freshToken;
+            if (sanitizedConfig.vaultAddr) {
+                const parsedVaultUrl = new URL(sanitizedConfig.vaultAddr);
+                if (!['http:', 'https:'].includes(parsedVaultUrl.protocol)) {
+                    throw new Error('Vault address must start with http:// or https://');
+                }
+                sanitizedConfig.vaultAddr = sanitizedConfig.vaultAddr.trim();
+            }
+
+            if (sanitizedConfig.pkiPath) {
+                sanitizedConfig.pkiPath = sanitizedConfig.pkiPath.trim().replace(/^\/+|\/+$/g, '');
+            }
+
+            if (sanitizedConfig.roleName) {
+                sanitizedConfig.roleName = sanitizedConfig.roleName.trim();
+            }
+
+            if (sanitizedConfig.commonName) {
+                sanitizedConfig.commonName = sanitizedConfig.commonName.trim();
+            }
+
+            if (Object.prototype.hasOwnProperty.call(sanitizedConfig, 'vaultToken')) {
+                sanitizedConfig.vaultToken = sanitizedConfig.vaultToken.trim();
+            }
+
+            const nextConfig = { ...this.config, ...sanitizedConfig };
+            
+            if (!this.isDefaultVaultConfig(nextConfig)) {
+                this.backupDefaultConfigIfNeeded();
+            }
+
+            // Merge new config with existing
+            this.config = nextConfig;
+            
+            if (!this.config.vaultToken) {
+                this.config.vaultToken = this.getExternalToken();
             }
             
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-            console.log('Vault PKI configuration saved with fresh token');
+            console.log('Vault PKI configuration saved');
             return true;
         } catch (error) {
             console.error('Error saving Vault PKI config:', error);
@@ -243,10 +318,12 @@ class VaultPkiManager {
         const certInfo = this.getCertificateInfo();
         
         return {
-            configured: !!this.config.vaultToken && !!this.config.commonName,
+            configured: !!this.config.vaultToken && !!this.config.commonName && !!this.config.vaultAddr && !!this.config.roleName,
             certificateExists: this.certificateExists(),
             certificateInfo: certInfo,
-            needsRenewal: this.needsRenewal()
+            needsRenewal: this.needsRenewal(),
+            isDefaultConfig: this.isDefaultVaultConfig(),
+            hasDefaultBackup: fs.existsSync(this.defaultConfigPath)
         };
     }
 }

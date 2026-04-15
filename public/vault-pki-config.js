@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     
     document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
+    document.getElementById('restoreDefaultBtn').addEventListener('click', restoreDefaultConfig);
     document.getElementById('obtainCertBtn').addEventListener('click', obtainCertificate);
     document.getElementById('retrieveCertBtn').addEventListener('click', retrieveCertificate);
     document.getElementById('toggleTokenBtn').addEventListener('click', toggleTokenVisibility);
@@ -23,15 +24,17 @@ async function loadConfig() {
             
             // Populate Vault connection fields
             document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
-            document.getElementById('displayVaultToken').value = currentConfig.vaultToken || '';
+            document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
             
             // Populate form fields
             document.getElementById('commonName').value = currentConfig.commonName || 'localhost';
             document.getElementById('vaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
+            document.getElementById('pkiPath').value = currentConfig.pkiPath || 'pki';
             document.getElementById('roleName').value = currentConfig.roleName || 'localhost';
             
             // Update status
             updateStatus(data.status);
+            updateRestoreDefaultButton(data.status);
         }
     } catch (error) {
         console.error('Error loading config:', error);
@@ -90,18 +93,60 @@ function updateStatus(status) {
     statusDiv.innerHTML = html;
 }
 
+function updateRestoreDefaultButton(status) {
+    const button = document.getElementById('restoreDefaultBtn');
+    if (!button) {
+        return;
+    }
+
+    button.disabled = !status || (!status.hasDefaultBackup && status.isDefaultConfig);
+}
+
 // Save configuration
 async function saveConfig() {
     const commonName = document.getElementById('commonName').value.trim();
+    const vaultAddr = document.getElementById('vaultAddr').value.trim();
+    const pkiPath = document.getElementById('pkiPath').value.trim() || 'pki';
+    const roleName = document.getElementById('roleName').value.trim();
     
     if (!commonName) {
         showStatus('Please enter a common name', 'error');
         return;
     }
+
+    if (!vaultAddr) {
+        showStatus('Please enter a Vault address', 'error');
+        return;
+    }
+
+    if (!roleName) {
+        showStatus('Please enter a Vault PKI role', 'error');
+        return;
+    }
+
+    try {
+        const parsedVaultUrl = new URL(vaultAddr);
+        if (parsedVaultUrl.protocol !== 'http:' && parsedVaultUrl.protocol !== 'https:') {
+            showStatus('Vault address must start with http:// or https://', 'error');
+            return;
+        }
+    } catch (error) {
+        showStatus('Invalid Vault address format', 'error');
+        return;
+    }
     
+    const vaultToken = document.getElementById('vaultToken').value.trim();
+
     const config = {
-        commonName: commonName
+        commonName: commonName,
+        vaultAddr: vaultAddr,
+        pkiPath: pkiPath.replace(/^\/+|\/+$/g, ''),
+        roleName: roleName
     };
+
+    if (vaultToken) {
+        config.vaultToken = vaultToken;
+    }
     
     try {
         showStatus('Saving configuration...', 'info');
@@ -119,13 +164,50 @@ async function saveConfig() {
         if (data.success) {
             showStatus('✅ Configuration saved successfully!', 'success');
             currentConfig = data.config;
+            document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || vaultAddr;
+            document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
             updateStatus(data.status);
+            updateRestoreDefaultButton(data.status);
         } else {
             showStatus(`❌ Error: ${data.error}`, 'error');
         }
     } catch (error) {
         console.error('Error saving config:', error);
         showStatus('❌ Error saving configuration', 'error');
+    }
+}
+
+async function restoreDefaultConfig() {
+    if (!confirm('Restore the Vault configuration to the saved default values?')) {
+        return;
+    }
+
+    try {
+        showStatus('Restoring default configuration...', 'info');
+
+        const response = await fetch('/api/acme/config/restore-default', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('✅ Default configuration restored successfully!', 'success');
+            currentConfig = data.config;
+            document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
+            document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
+            document.getElementById('commonName').value = currentConfig.commonName || 'localhost';
+            document.getElementById('vaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
+            document.getElementById('pkiPath').value = currentConfig.pkiPath || 'pki';
+            document.getElementById('roleName').value = currentConfig.roleName || 'localhost';
+            updateStatus(data.status);
+            updateRestoreDefaultButton(data.status);
+        } else {
+            showStatus(`❌ Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error restoring default config:', error);
+        showStatus('❌ Error restoring default configuration', 'error');
     }
 }
 
@@ -195,7 +277,7 @@ async function retrieveCertificate() {
 
 // Toggle token visibility
 function toggleTokenVisibility() {
-    const tokenInput = document.getElementById('displayVaultToken');
+    const tokenInput = document.getElementById('vaultToken');
     const toggleBtn = document.getElementById('toggleTokenBtn');
     
     if (tokenInput.type === 'password') {
