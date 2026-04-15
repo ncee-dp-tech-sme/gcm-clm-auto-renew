@@ -47,8 +47,11 @@ services:
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
       - VAULT_LOG_LEVEL=info
       - VAULT_UI=true
+      - SKIP_SETCAP=true
     cap_add:
       - IPC_LOCK
+    security_opt:
+      - label=disable
     volumes:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
