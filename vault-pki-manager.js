@@ -64,7 +64,29 @@ class VaultPkiManager {
 
     saveConfig(newConfig) {
         try {
+            // Merge new config with existing
             this.config = { ...this.config, ...newConfig };
+            
+            // Always refresh the token from environment/file before saving
+            // This ensures we don't save a stale or empty token
+            const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
+            let vaultToken = process.env.VAULT_TOKEN || '';
+            
+            if (!vaultToken) {
+                try {
+                    if (fs.existsSync(VAULT_TOKEN_FILE)) {
+                        vaultToken = fs.readFileSync(VAULT_TOKEN_FILE, 'utf8').trim();
+                    }
+                } catch (error) {
+                    console.error('Error reading Vault token file:', error);
+                }
+            }
+            
+            // Only update token if we found a valid one
+            if (vaultToken) {
+                this.config.vaultToken = vaultToken;
+            }
+            
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
             console.log('Vault PKI configuration saved');
             return true;
