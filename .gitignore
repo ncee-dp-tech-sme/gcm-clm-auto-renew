@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Certificate storage (contains sensitive data)
+certificates.json
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/

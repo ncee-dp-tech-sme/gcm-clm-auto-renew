@@ -1,0 +1,5 @@
+{
+  "targetUrl": "https://www.google.com",
+  "port": 3000,
+  "checkIntervalMinutes": 60
+}

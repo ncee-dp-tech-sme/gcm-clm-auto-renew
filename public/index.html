@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSL/TLS Certificate Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 SSL/TLS Certificate Monitor</h1>
+            <p class="subtitle">Track and compare certificate changes</p>
+        </header>
+
+        <div class="controls">
+            <div class="target-url">
+                <strong>Monitoring:</strong> <span id="targetUrl">Loading...</span>
+            </div>
+            <button id="checkNowBtn" class="btn-primary">
+                <span class="btn-icon">🔄</span> Check Certificate Now
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div id="loadingIndicator" class="loading">
+            <div class="spinner"></div>
+            <p>Fetching certificate information...</p>
+        </div>
+
+        <div id="certificatesContainer" class="certificates-container">
+            <div id="noCertificates" class="no-certificates">
+                <p>No certificates found. Click "Check Certificate Now" to fetch the current certificate.</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Last updated: <span id="lastUpdated">Never</span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

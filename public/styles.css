@@ -1,0 +1,363 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.controls {
+    padding: 25px 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.target-url {
+    font-size: 1em;
+    color: #495057;
+}
+
+.target-url span {
+    color: #667eea;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-icon {
+    font-size: 1.2em;
+}
+
+.status-message {
+    padding: 15px 30px;
+    margin: 0;
+    font-weight: 500;
+    display: none;
+}
+
+.status-message.success {
+    background: #d4edda;
+    color: #155724;
+    border-bottom: 2px solid #c3e6cb;
+    display: block;
+}
+
+.status-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border-bottom: 2px solid #f5c6cb;
+    display: block;
+}
+
+.status-message.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-bottom: 2px solid #bee5eb;
+    display: block;
+}
+
+.loading {
+    text-align: center;
+    padding: 60px 30px;
+    display: none;
+}
+
+.loading.active {
+    display: block;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.certificates-container {
+    padding: 30px;
+    min-height: 400px;
+}
+
+.no-certificates {
+    text-align: center;
+    padding: 60px 30px;
+    color: #6c757d;
+    font-size: 1.1em;
+}
+
+.certificates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 30px;
+}
+
+.certificate-card {
+    background: #fff;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.certificate-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.certificate-card.current {
+    border-color: #28a745;
+    background: linear-gradient(to bottom, #f0fff4 0%, #ffffff 100%);
+}
+
+.certificate-card.previous {
+    border-color: #ffc107;
+    background: linear-gradient(to bottom, #fffbf0 0%, #ffffff 100%);
+}
+
+.certificate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.certificate-title {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #333;
+}
+
+.certificate-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-current {
+    background: #28a745;
+    color: white;
+}
+
+.badge-previous {
+    background: #ffc107;
+    color: #333;
+}
+
+.certificate-details {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.detail-group {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.detail-group h3 {
+    font-size: 1em;
+    color: #667eea;
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #495057;
+    flex: 0 0 40%;
+}
+
+.detail-value {
+    color: #212529;
+    flex: 1;
+    text-align: right;
+    word-break: break-word;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.validity-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.validity-valid {
+    background: #d4edda;
+    color: #155724;
+}
+
+.validity-expired {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.validity-expiring {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.fetched-time {
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9em;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+footer {
+    background: #f8f9fa;
+    padding: 20px 30px;
+    text-align: center;
+    color: #6c757d;
+    border-top: 1px solid #e9ecef;
+}
+
+footer span {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .certificates-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8em;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-primary {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .certificate-card {
+        padding: 20px;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .detail-value {
+        text-align: left;
+    }
+}
+
+/* Comparison highlights */
+.detail-changed {
+    background: #fff3cd;
+    padding: 8px;
+    margin: -8px;
+    border-radius: 4px;
+    animation: highlight 2s ease-in-out;
+}
+
+@keyframes highlight {
+    0%, 100% { background: transparent; }
+    50% { background: #fff3cd; }
+}
+
+/* Made with Bob */
