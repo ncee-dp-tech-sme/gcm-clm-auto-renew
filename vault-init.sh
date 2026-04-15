@@ -13,10 +13,12 @@ echo "Waiting for Vault API to be accessible..."
 MAX_RETRIES=30
 RETRY_COUNT=0
 
-until wget -q --spider http://vault:8200/v1/sys/health?uninitcode=200&sealedcode=200 2>/dev/null; do
+until vault status -format=json 2>/dev/null | grep -q "initialized"; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         echo "ERROR: Vault API did not become accessible after $MAX_RETRIES attempts"
+        echo "Last vault status attempt:"
+        vault status 2>&1 || echo "Vault CLI not responding"
         exit 1
     fi
     echo "Vault API not accessible yet, waiting... (attempt $RETRY_COUNT/$MAX_RETRIES)"
