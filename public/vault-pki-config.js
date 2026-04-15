@@ -210,16 +210,28 @@ function toggleTokenVisibility() {
 // Show status message
 function showStatus(message, type) {
     const statusDiv = document.getElementById('statusMessage');
+    if (!statusDiv) {
+        console.error('Status message element not found');
+        return;
+    }
     statusDiv.textContent = message;
     statusDiv.className = `status-message status-${type}`;
-    statusDiv.style.display = 'block';
     
-    // Auto-hide after 5 seconds for success messages
-    if (type === 'success') {
+    // Auto-hide after 5 seconds for success/info messages
+    if (type === 'success' || type === 'info') {
         setTimeout(() => {
-            statusDiv.style.display = 'none';
+            hideStatus();
         }, 5000);
     }
+}
+
+// Hide status message
+function hideStatus() {
+    const statusDiv = document.getElementById('statusMessage');
+    if (!statusDiv) {
+        return;
+    }
+    statusDiv.className = 'status-message';
 }
 
 // Made with Bob
