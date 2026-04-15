@@ -16,10 +16,12 @@ function setupEventListeners() {
     
     document.getElementById('acmeDirectoryUrl').addEventListener('change', (e) => {
         const customUrlGroup = document.getElementById('customUrlGroup');
-        if (e.target.value === 'custom') {
-            customUrlGroup.style.display = 'block';
-        } else {
-            customUrlGroup.style.display = 'none';
+        if (customUrlGroup) {
+            if (e.target.value === 'custom') {
+                customUrlGroup.style.display = 'block';
+            } else {
+                customUrlGroup.style.display = 'none';
+            }
         }
     });
 }
@@ -59,7 +61,10 @@ function populateForm(config) {
     } else {
         acmeUrlSelect.value = 'custom';
         customUrl.value = config.acmeDirectoryUrl;
-        document.getElementById('customUrlGroup').style.display = 'block';
+        const customUrlGroup = document.getElementById('customUrlGroup');
+        if (customUrlGroup) {
+            customUrlGroup.style.display = 'block';
+        }
     }
 }
 

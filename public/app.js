@@ -174,11 +174,15 @@ function displayCertificates() {
     const noCerts = document.getElementById('noCertificates');
     
     if (!certificates || certificates.length === 0) {
-        noCerts.style.display = 'block';
+        if (noCerts) {
+            noCerts.style.display = 'block';
+        }
         return;
     }
     
-    noCerts.style.display = 'none';
+    if (noCerts) {
+        noCerts.style.display = 'none';
+    }
     
     // Create grid container
     let html = '<div class="certificates-grid">';
