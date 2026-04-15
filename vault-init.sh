@@ -13,7 +13,7 @@ echo "Waiting for Vault to be ready..."
 MAX_RETRIES=30
 RETRY_COUNT=0
 
-until vault status > /dev/null 2>&1; do
+until wget -q --spider http://vault:8200/v1/sys/health 2>/dev/null; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
         echo "ERROR: Vault did not become ready after $MAX_RETRIES attempts"
@@ -24,6 +24,43 @@ until vault status > /dev/null 2>&1; do
 done
 
 echo "Vault is ready!"
+
+# Check if Vault is initialized
+if ! vault status 2>/dev/null | grep -q "Initialized.*true"; then
+    echo ""
+    echo "Initializing Vault..."
+    vault operator init -key-shares=1 -key-threshold=1 -format=json > /vault-config/init-keys.json
+    
+    # Extract unseal key and root token
+    UNSEAL_KEY=$(cat /vault-config/init-keys.json | grep -o '"unseal_keys_b64":\["[^"]*"' | cut -d'"' -f4)
+    ROOT_TOKEN=$(cat /vault-config/init-keys.json | grep -o '"root_token":"[^"]*"' | cut -d'"' -f4)
+    
+    echo "Vault initialized successfully!"
+    echo "Unseal key and root token saved to /vault-config/init-keys.json"
+    echo "IMPORTANT: Save this file securely!"
+else
+    echo "Vault is already initialized"
+    
+    # Try to load existing keys
+    if [ -f /vault-config/init-keys.json ]; then
+        UNSEAL_KEY=$(cat /vault-config/init-keys.json | grep -o '"unseal_keys_b64":\["[^"]*"' | cut -d'"' -f4)
+        ROOT_TOKEN=$(cat /vault-config/init-keys.json | grep -o '"root_token":"[^"]*"' | cut -d'"' -f4)
+    else
+        echo "ERROR: Vault is initialized but init-keys.json not found!"
+        echo "Cannot proceed without unseal key and root token"
+        exit 1
+    fi
+fi
+
+# Unseal Vault
+echo ""
+echo "Unsealing Vault..."
+vault operator unseal "$UNSEAL_KEY"
+
+# Set root token for subsequent commands
+export VAULT_TOKEN="$ROOT_TOKEN"
+
+echo "Vault unsealed and ready!"
 
 # Check if already initialized
 if vault secrets list 2>/dev/null | grep -q "pki/"; then
@@ -67,14 +104,14 @@ vault write pki/roles/localhost \
     key_bits=2048
 
 echo ""
-echo "Step 6: Enabling ACME protocol..."
-vault write pki/config/acme enabled=true
-
-echo ""
-echo "Step 7: Configuring ACME cluster..."
+echo "Step 6: Configuring ACME cluster (MUST be done before enabling ACME)..."
 vault write pki/config/cluster \
     path=http://vault:8200/v1/pki \
     aia_path=http://vault:8200/v1/pki
+
+echo ""
+echo "Step 7: Enabling ACME protocol..."
+vault write pki/config/acme enabled=true
 
 echo ""
 echo "Step 8: Creating ACME configuration file for cert-monitor..."
@@ -94,7 +131,13 @@ EOF
 echo "ACME configuration saved to /vault-config/acme-config.json"
 
 echo ""
-echo "Step 9: Testing ACME directory endpoint..."
+echo "Step 9: Saving root token to file for cert-monitor..."
+echo "$ROOT_TOKEN" > /vault-config/root-token.txt
+chmod 600 /vault-config/root-token.txt
+echo "Root token saved to /vault-config/root-token.txt"
+
+echo ""
+echo "Step 10: Testing ACME directory endpoint..."
 if vault read pki/acme/directory > /dev/null 2>&1; then
     echo "✓ ACME directory endpoint is accessible"
 else

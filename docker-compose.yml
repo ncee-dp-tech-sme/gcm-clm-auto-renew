@@ -14,7 +14,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
-      - VAULT_TOKEN=${VAULT_TOKEN:-root}
+      - VAULT_TOKEN_FILE=/vault-config/root-token.txt
     volumes:
       # Persist certificate data
       - cert-data:/app/certs
@@ -23,6 +23,8 @@ services:
       # Persist logs
       - nginx-logs:/var/log/nginx
       - supervisor-logs:/var/log/supervisor
+      # Mount vault config for root token
+      - vault-config:/vault-config:ro
     restart: unless-stopped
     networks:
       - cert-monitor-network
@@ -43,10 +45,9 @@ services:
     ports:
       - "8200:8200"
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=root
-      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_API_ADDR=http://0.0.0.0:8200
       - VAULT_LOG_LEVEL=info
-      - VAULT_UI=true
       - SKIP_SETCAP=true
     cap_add:
       - IPC_LOCK
@@ -55,10 +56,11 @@ services:
     volumes:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
+      - ./vault-config.hcl:/vault/config/vault.hcl:ro
       - ./vault-init.sh:/vault-init.sh:ro
     networks:
       - cert-monitor-network
-    command: server -dev -dev-root-token-id=root
+    command: server
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 10s
