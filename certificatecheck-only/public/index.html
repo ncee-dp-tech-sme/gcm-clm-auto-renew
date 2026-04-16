@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate Check Only</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔒 Certificate Check Only</h1>
+      <p class="subtitle">Check a host certificate and compare the current and previous versions side by side</p>
+    </header>
+
+    <div class="controls">
+      <div class="url-input-group">
+        <label for="urlInput"><strong>Target URL:</strong></label>
+        <input
+          type="text"
+          id="urlInput"
+          placeholder="https://www.example.com"
+          class="url-input"
+        />
+        <button id="updateUrlBtn" class="btn-secondary">
+          <span class="btn-icon">💾</span> Update URL
+        </button>
+      </div>
+      <div class="button-group">
+        <button id="checkNowBtn" class="btn-primary">
+          <span class="btn-icon">🔄</span> Check Certificate
+        </button>
+        <button id="clearStorageBtn" class="btn-danger">
+          <span class="btn-icon">🗑️</span> Clear History
+        </button>
+      </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <div id="loadingIndicator" class="loading">
+      <div class="spinner"></div>
+      <p>Fetching certificate information...</p>
+    </div>
+
+    <div id="comparisonSection" class="certificate-comparison" style="display: none;">
+      <div class="comparison-header">
+        <h2>📄 Certificate Comparison</h2>
+        <span class="comparison-legend">Changed values are marked with a red *</span>
+      </div>
+      <div id="comparisonSummary" class="comparison-summary"></div>
+      <div class="comparison-grid">
+        <div class="comparison-column">
+          <h3>Current Certificate</h3>
+          <div id="currentCertificateDetails" class="comparison-details"></div>
+        </div>
+        <div class="comparison-column">
+          <h3>Previous Certificate</h3>
+          <div id="previousCertificateDetails" class="comparison-details"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="certificatesContainer" class="certificates-container">
+      <div id="noCertificates" class="no-certificates">
+        <p>No certificates found. Click "Check Certificate" to fetch and store the current certificate.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p>Last updated: <span id="lastUpdated">Never</span></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
