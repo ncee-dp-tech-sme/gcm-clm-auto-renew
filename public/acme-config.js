@@ -1,6 +1,20 @@
 // ACME Configuration Frontend
 
 let acmeConfig = {};
+const CERTIFICATE_COMPARISON_FIELDS = [
+    ['subject.commonName', 'Subject Common Name'],
+    ['subject.organization', 'Subject Organization'],
+    ['issuer.commonName', 'Issuer Common Name'],
+    ['issuer.organization', 'Issuer Organization'],
+    ['validFrom', 'Valid From'],
+    ['validTo', 'Valid To'],
+    ['serialNumber', 'Serial Number'],
+    ['fingerprint256', 'SHA-256 Fingerprint'],
+    ['fingerprint', 'SHA-1 Fingerprint'],
+    ['subjectAltNames', 'Subject Alt Names'],
+    ['url', 'URL'],
+    ['fetchedAt', 'Fetched At']
+];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +50,7 @@ async function loadAcmeConfig() {
             acmeConfig = data.config;
             populateForm(acmeConfig);
             updateStatus(data.status);
+            renderCertificateComparison([]);
         } else {
             showStatus('Error loading configuration: ' + data.error, 'error');
         }
@@ -185,6 +200,7 @@ async function obtainCertificate() {
         if (data.success) {
             showStatus('✅ Certificate obtained successfully! Server will restart with HTTPS.', 'success');
             updateStatus(data.status);
+            renderCertificateComparison(data.certificates || []);
             
             // Redirect to HTTPS after a delay
             setTimeout(() => {
@@ -197,6 +213,81 @@ async function obtainCertificate() {
         console.error('Error obtaining certificate:', error);
         showStatus('Error connecting to server', 'error');
     }
+}
+
+function getNestedValue(source, path) {
+    return path.split('.').reduce((value, key) => (value && value[key] !== undefined ? value[key] : ''), source);
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&')
+        .replaceAll('<', '<')
+        .replaceAll('>', '>')
+        .replaceAll('"', '"')
+        .replaceAll('`', '&#96;');
+}
+
+function valuesDiffer(currentValue, previousValue) {
+    return String(currentValue ?? '') !== String(previousValue ?? '');
+}
+
+function renderCertificateComparison(certificates) {
+    const comparisonSection = document.getElementById('certificateComparison');
+    const currentContainer = document.getElementById('currentCertificateDetails');
+    const previousContainer = document.getElementById('previousCertificateDetails');
+    const summaryContainer = document.getElementById('comparisonSummary');
+
+    if (!comparisonSection || !currentContainer || !previousContainer || !summaryContainer) {
+        return;
+    }
+
+    const currentCertificate = Array.isArray(certificates) ? certificates[0] : null;
+    const previousCertificate = Array.isArray(certificates) ? certificates[1] : null;
+
+    if (!currentCertificate || !previousCertificate) {
+        comparisonSection.style.display = 'none';
+        currentContainer.innerHTML = '';
+        previousContainer.innerHTML = '';
+        summaryContainer.innerHTML = '';
+        return;
+    }
+
+    const changedFields = CERTIFICATE_COMPARISON_FIELDS.filter(([fieldPath]) => {
+        return valuesDiffer(getNestedValue(currentCertificate, fieldPath), getNestedValue(previousCertificate, fieldPath));
+    });
+
+    if (!changedFields.length) {
+        comparisonSection.style.display = 'none';
+        currentContainer.innerHTML = '';
+        previousContainer.innerHTML = '';
+        summaryContainer.innerHTML = '';
+        return;
+    }
+
+    comparisonSection.style.display = 'block';
+    summaryContainer.innerHTML = `<strong>${changedFields.length}</strong> field(s) changed between the current and previous certificate.`;
+
+    const renderColumn = (certificate, counterpart) => {
+        return CERTIFICATE_COMPARISON_FIELDS.map(([fieldPath, label]) => {
+            const value = getNestedValue(certificate, fieldPath) || 'N/A';
+            const otherValue = getNestedValue(counterpart, fieldPath) || 'N/A';
+            const changed = valuesDiffer(value, otherValue);
+
+            return `
+                <div class="comparison-row${changed ? ' comparison-row-changed' : ''}">
+                    <div class="comparison-label">
+                        ${changed ? '<span class="diff-marker" aria-hidden="true">*</span>' : '<span class="diff-marker-placeholder"></span>'}
+                        <span>${escapeHtml(label)}</span>
+                    </div>
+                    <div class="comparison-value">${escapeHtml(value)}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    currentContainer.innerHTML = renderColumn(currentCertificate, previousCertificate);
+    previousContainer.innerHTML = renderColumn(previousCertificate, currentCertificate);
 }
 
 // Show status message

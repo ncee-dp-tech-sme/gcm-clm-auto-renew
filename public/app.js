@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set up event listeners
     document.getElementById('checkNowBtn').addEventListener('click', checkCertificateNow);
+    document.getElementById('retrieveCertBtn').addEventListener('click', retrieveAndInstallCertificate);
     document.getElementById('updateUrlBtn').addEventListener('click', updateTargetUrl);
     document.getElementById('clearStorageBtn').addEventListener('click', clearStorage);
 });
@@ -168,6 +169,39 @@ async function checkCertificateNow() {
     }
 }
 
+async function retrieveAndInstallCertificate() {
+    const button = document.getElementById('retrieveCertBtn');
+    button.disabled = true;
+
+    try {
+        showStatus('🔄 Retrieving and installing certificate from Vault...', 'info');
+
+        const response = await fetch('/api/acme/retrieve-certificate', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const result = data.result || {};
+            if (result.changed) {
+                showStatus('✅ Certificate retrieved and installed successfully!', 'success');
+            } else {
+                showStatus(`ℹ️ ${data.message || 'Installed certificate is already current'}`, 'info');
+            }
+
+            await loadCertificates();
+        } else {
+            showStatus('Error retrieving certificate: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error retrieving certificate:', error);
+        showStatus('Error: ' + (error.message || 'Unable to retrieve certificate'), 'error');
+    } finally {
+        button.disabled = false;
+    }
+}
+ 
 // Display certificates
 function displayCertificates() {
     const container = document.getElementById('certificatesContainer');

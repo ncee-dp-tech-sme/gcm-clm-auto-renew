@@ -2,6 +2,7 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 class VaultPkiManager {
     constructor(configPath = null) {
@@ -34,23 +35,72 @@ class VaultPkiManager {
         }
     }
 
+    getVaultCredentialPaths() {
+        return {
+            tokenFile: process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt',
+            unsealFile: process.env.VAULT_UNSEAL_FILE || '/vault-config/unseal-key.txt',
+            initKeysFile: process.env.VAULT_INIT_KEYS_FILE || '/vault-config/init-keys.json'
+        };
+    }
+
+    readFileIfExists(filePath) {
+        try {
+            if (fs.existsSync(filePath)) {
+                return fs.readFileSync(filePath, 'utf8').trim();
+            }
+        } catch (error) {
+            console.error(`Error reading file ${filePath}:`, error);
+        }
+        return '';
+    }
+
+    getExternalUnsealToken() {
+        const { unsealFile, initKeysFile } = this.getVaultCredentialPaths();
+
+        const unsealTokenFromFile = this.readFileIfExists(unsealFile);
+        if (unsealTokenFromFile) {
+            console.log('Using Vault unseal token from file:', unsealFile);
+            return unsealTokenFromFile;
+        }
+
+        try {
+            if (fs.existsSync(initKeysFile)) {
+                const initKeys = JSON.parse(fs.readFileSync(initKeysFile, 'utf8'));
+                const unsealToken = Array.isArray(initKeys.unseal_keys_b64) ? initKeys.unseal_keys_b64[0] : '';
+                if (unsealToken) {
+                    console.log('Using Vault unseal token from init keys file:', initKeysFile);
+                    return unsealToken;
+                }
+            }
+        } catch (error) {
+            console.error('Error reading Vault init keys file:', error);
+        }
+
+        return process.env.VAULT_UNSEAL_TOKEN || '';
+    }
+
     // Helper method to get token from file or environment
     // Priority: 1. Token file (written by vault-init), 2. Environment variable
     getExternalToken() {
-        const VAULT_TOKEN_FILE = process.env.VAULT_TOKEN_FILE || '/vault-config/root-token.txt';
-        let vaultToken = '';
+        const { tokenFile, initKeysFile } = this.getVaultCredentialPaths();
+        let vaultToken = this.readFileIfExists(tokenFile);
         
-        // First, try to read from file (most up-to-date from vault-init)
+        if (vaultToken) {
+            console.log('Using Vault token from file:', tokenFile);
+            return vaultToken;
+        }
+
         try {
-            if (fs.existsSync(VAULT_TOKEN_FILE)) {
-                vaultToken = fs.readFileSync(VAULT_TOKEN_FILE, 'utf8').trim();
+            if (fs.existsSync(initKeysFile)) {
+                const initKeys = JSON.parse(fs.readFileSync(initKeysFile, 'utf8'));
+                vaultToken = initKeys.root_token || '';
                 if (vaultToken) {
-                    console.log('Using Vault token from file:', VAULT_TOKEN_FILE);
+                    console.log('Using Vault token from init keys file:', initKeysFile);
                     return vaultToken;
                 }
             }
         } catch (error) {
-            console.error('Error reading Vault token file:', error);
+            console.error('Error reading Vault init keys file:', error);
         }
         
         // Fallback to environment variable
@@ -76,6 +126,7 @@ class VaultPkiManager {
         return {
             vaultAddr: VAULT_ADDR,
             vaultToken: vaultToken,
+            vaultUnsealToken: this.getExternalUnsealToken(),
             pkiPath: 'pki',
             roleName: 'localhost',
             commonName: 'localhost',
@@ -226,7 +277,142 @@ class VaultPkiManager {
         });
     }
 
-    // Issue a new certificate from Vault
+    ensureCertificateDirectories() {
+        fs.mkdirSync(path.dirname(this.config.certificatePath), { recursive: true });
+        fs.mkdirSync(path.dirname(this.config.privateKeyPath), { recursive: true });
+    }
+
+    buildFullchain(certificate, issuingCa = null, caChain = null) {
+        const chainParts = [];
+
+        if (Array.isArray(caChain) && caChain.length > 0) {
+            chainParts.push(...caChain.filter(Boolean));
+        } else if (issuingCa) {
+            chainParts.push(issuingCa);
+        }
+
+        return [certificate, ...chainParts].filter(Boolean).join('\n');
+    }
+
+    writeCertificateFiles(certificatePem, privateKeyPem, issuingCa = null, caChain = null) {
+        this.ensureCertificateDirectories();
+
+        const fullchain = this.buildFullchain(certificatePem, issuingCa, caChain);
+
+        fs.writeFileSync(this.config.certificatePath, fullchain);
+        fs.writeFileSync(this.config.privateKeyPath, privateKeyPem);
+
+        try {
+            fs.chmodSync(this.config.privateKeyPath, 0o600);
+        } catch (error) {
+            console.warn('Warning: unable to set private key permissions:', error.message);
+        }
+
+        console.log('Certificate saved to:', this.config.certificatePath);
+        console.log('Private key saved to:', this.config.privateKeyPath);
+
+        return fullchain;
+    }
+
+    getInstalledCertificateFingerprint() {
+        try {
+            if (!this.certificateExists()) {
+                return null;
+            }
+
+            const output = execFileSync('openssl', ['x509', '-in', this.config.certificatePath, '-noout', '-fingerprint', '-sha256'], {
+                encoding: 'utf8'
+            }).trim();
+
+            const match = output.match(/Fingerprint=([A-F0-9:]+)/i);
+            return match ? match[1].replace(/:/g, '').toUpperCase() : null;
+        } catch (error) {
+            console.error('Error reading installed certificate fingerprint:', error.message);
+            return null;
+        }
+    }
+
+    getVaultIssuedCertificates() {
+        return this.vaultRequest('LIST', `/v1/${this.config.pkiPath}/certs`);
+    }
+
+    normalizeFingerprint(value) {
+        if (!value) {
+            return null;
+        }
+        return String(value).replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+    }
+
+    parsePemBundle(pemText) {
+        const matches = String(pemText || '').match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g);
+        return matches || [];
+    }
+
+    getCertificateFingerprintFromPem(pemText) {
+        try {
+            const output = execFileSync('openssl', ['x509', '-noout', '-fingerprint', '-sha256'], {
+                input: pemText,
+                encoding: 'utf8'
+            }).trim();
+
+            const match = output.match(/Fingerprint=([A-F0-9:]+)/i);
+            return match ? this.normalizeFingerprint(match[1]) : null;
+        } catch (error) {
+            console.error('Error calculating fingerprint from PEM:', error.message);
+            return null;
+        }
+    }
+
+    getLatestVaultCertificate() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const listed = await this.getVaultIssuedCertificates();
+                const keys = listed?.data?.keys || [];
+
+                if (!keys.length) {
+                    resolve(null);
+                    return;
+                }
+
+                const certificateDetails = [];
+                for (const serial of keys) {
+                    try {
+                        const certResponse = await this.vaultRequest('GET', `/v1/${this.config.pkiPath}/cert/${serial}`);
+                        if (certResponse?.data?.certificate) {
+                            const pemBlocks = this.parsePemBundle(certResponse.data.certificate);
+                            const leafPem = pemBlocks[0] || certResponse.data.certificate;
+                            const chainPem = pemBlocks.slice(1);
+                            certificateDetails.push({
+                                serial,
+                                certificatePem: leafPem,
+                                chainPem,
+                                certificate: certResponse.data.certificate,
+                                privateKey: null,
+                                commonName: certResponse.data.common_name || certResponse.data.subject || '',
+                                expiry: certResponse.data.expiration ? Number(certResponse.data.expiration) : 0,
+                                fingerprint: this.getCertificateFingerprintFromPem(leafPem)
+                            });
+                        }
+                    } catch (error) {
+                        console.warn(`Unable to read Vault certificate ${serial}:`, error.message);
+                    }
+                }
+
+                const filtered = certificateDetails.filter(cert =>
+                    cert.commonName && cert.commonName.includes(this.config.commonName)
+                );
+
+                const candidates = filtered.length ? filtered : certificateDetails;
+                candidates.sort((a, b) => (b.expiry || 0) - (a.expiry || 0));
+
+                resolve(candidates[0] || null);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    // Issue a new certificate from Vault and install it
     async obtainCertificate() {
         try {
             console.log('Requesting certificate from Vault PKI...');
@@ -245,25 +431,81 @@ class VaultPkiManager {
                 throw new Error('No data in Vault response');
             }
 
-            const { certificate, private_key, ca_chain } = response.data;
+            const { certificate, private_key, ca_chain, issuing_ca, serial_number } = response.data;
 
-            // Combine certificate with CA chain for fullchain
-            const fullchain = certificate + '\n' + (ca_chain ? ca_chain.join('\n') : '');
+            if (!certificate || !private_key) {
+                throw new Error('Vault did not return certificate and private key');
+            }
 
-            // Save certificate and private key
-            fs.writeFileSync(this.config.certificatePath, fullchain);
-            fs.writeFileSync(this.config.privateKeyPath, private_key);
-
-            console.log('Certificate saved to:', this.config.certificatePath);
-            console.log('Private key saved to:', this.config.privateKeyPath);
+            const fullchain = this.writeCertificateFiles(certificate, private_key, issuing_ca, ca_chain);
 
             return {
                 success: true,
+                action: 'obtained',
+                serialNumber: serial_number || null,
                 certificate: fullchain,
                 privateKey: private_key
             };
         } catch (error) {
             console.error('Error obtaining certificate from Vault:', error);
+            throw error;
+        }
+    }
+
+    // Retrieve latest available certificate from Vault and install it if newer
+    async retrieveLatestCertificate() {
+        try {
+            console.log('Checking Vault for latest available certificate...');
+            const latestVaultCert = await this.getLatestVaultCertificate();
+
+            if (!latestVaultCert) {
+                return {
+                    success: true,
+                    action: 'none',
+                    changed: false,
+                    message: 'No issued certificate found in Vault for retrieval'
+                };
+            }
+
+            if (!latestVaultCert.certificatePem) {
+                throw new Error('Latest Vault certificate does not include certificate PEM data');
+            }
+
+            const installedFingerprint = this.getInstalledCertificateFingerprint();
+            const latestFingerprint = this.normalizeFingerprint(latestVaultCert.fingerprint);
+
+            if (installedFingerprint && latestFingerprint && installedFingerprint === latestFingerprint) {
+                return {
+                    success: true,
+                    action: 'retrieved',
+                    changed: false,
+                    message: 'Installed certificate is already the latest available certificate',
+                    serialNumber: latestVaultCert.serial
+                };
+            }
+
+            if (!this.config.privateKeyPath || !fs.existsSync(this.config.privateKeyPath)) {
+                throw new Error('Cannot install retrieved certificate because the existing private key is missing');
+            }
+
+            const existingPrivateKey = fs.readFileSync(this.config.privateKeyPath, 'utf8');
+            const fullchain = this.writeCertificateFiles(
+                latestVaultCert.certificatePem,
+                existingPrivateKey,
+                null,
+                latestVaultCert.chainPem
+            );
+
+            return {
+                success: true,
+                action: 'retrieved',
+                changed: true,
+                message: 'Latest Vault certificate retrieved and installed successfully',
+                serialNumber: latestVaultCert.serial,
+                certificate: fullchain
+            };
+        } catch (error) {
+            console.error('Error retrieving latest certificate from Vault:', error);
             throw error;
         }
     }

@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
     document.getElementById('restoreDefaultBtn').addEventListener('click', restoreDefaultConfig);
     document.getElementById('obtainCertBtn').addEventListener('click', obtainCertificate);
-    document.getElementById('retrieveCertBtn').addEventListener('click', retrieveCertificate);
-    document.getElementById('toggleTokenBtn').addEventListener('click', toggleTokenVisibility);
+    document.getElementById('toggleTokenBtn').addEventListener('click', () => toggleTokenVisibility('vaultToken', 'toggleTokenBtn'));
+    document.getElementById('toggleUnsealTokenBtn').addEventListener('click', () => toggleTokenVisibility('vaultUnsealToken', 'toggleUnsealTokenBtn'));
 });
 
 // Load current configuration
@@ -25,6 +25,7 @@ async function loadConfig() {
             // Populate Vault connection fields
             document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
             document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
+            document.getElementById('vaultUnsealToken').value = currentConfig.vaultUnsealToken || '';
             
             // Populate form fields
             document.getElementById('commonName').value = currentConfig.commonName || 'localhost';
@@ -166,6 +167,7 @@ async function saveConfig() {
             currentConfig = data.config;
             document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || vaultAddr;
             document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
+            document.getElementById('vaultUnsealToken').value = currentConfig.vaultUnsealToken || '';
             updateStatus(data.status);
             updateRestoreDefaultButton(data.status);
         } else {
@@ -196,6 +198,7 @@ async function restoreDefaultConfig() {
             currentConfig = data.config;
             document.getElementById('displayVaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
             document.getElementById('vaultToken').value = currentConfig.vaultToken || '';
+            document.getElementById('vaultUnsealToken').value = currentConfig.vaultUnsealToken || '';
             document.getElementById('commonName').value = currentConfig.commonName || 'localhost';
             document.getElementById('vaultAddr').value = currentConfig.vaultAddr || 'http://vault:8200';
             document.getElementById('pkiPath').value = currentConfig.pkiPath || 'pki';
@@ -243,43 +246,16 @@ async function obtainCertificate() {
     }
 }
 
-// Retrieve and install certificate from Vault
-async function retrieveCertificate() {
-    if (!currentConfig || !currentConfig.commonName) {
-        showStatus('Please save configuration first', 'error');
-        return;
-    }
-    
-    try {
-        showStatus('🔄 Retrieving certificate from Vault...', 'info');
-        
-        const response = await fetch('/api/acme/retrieve-certificate', {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showStatus('✅ Certificate retrieved and installed successfully! Nginx will be reloaded.', 'success');
-            
-            // Reload status after a delay
-            setTimeout(() => {
-                loadConfig();
-            }, 2000);
-        } else {
-            showStatus(`❌ Error: ${data.error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Error retrieving certificate:', error);
-        showStatus('❌ Error retrieving certificate', 'error');
-    }
-}
 
 // Toggle token visibility
-function toggleTokenVisibility() {
-    const tokenInput = document.getElementById('vaultToken');
-    const toggleBtn = document.getElementById('toggleTokenBtn');
+function toggleTokenVisibility(inputId, buttonId) {
+    const tokenInput = document.getElementById(inputId);
+    const toggleBtn = document.getElementById(buttonId);
     
+    if (!tokenInput || !toggleBtn) {
+        return;
+    }
+
     if (tokenInput.type === 'password') {
         tokenInput.type = 'text';
         toggleBtn.textContent = '🙈 Hide';

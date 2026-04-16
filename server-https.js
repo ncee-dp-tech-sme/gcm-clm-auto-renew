@@ -4,6 +4,7 @@ const http = require('http');
 const tls = require('tls');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 const { URL } = require('url');
 const VaultPkiManager = require('./vault-pki-manager');
 
@@ -412,6 +413,57 @@ app.post('/api/acme/config/restore-default', (req, res) => {
         });
     }
 });
+
+function reloadNginx() {
+    if (process.platform !== 'linux') {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+        const signalTargets = [
+            '/run/nginx/nginx.pid',
+            '/var/run/nginx.pid',
+            '/run/nginx.pid'
+        ];
+
+        const trySignal = (index, errors = []) => {
+            if (index >= signalTargets.length) {
+                reject(new Error(errors.join(' | ') || 'Unable to signal nginx master process'));
+                return;
+            }
+
+            const pidFile = signalTargets[index];
+            fs.readFile(pidFile, 'utf8', (readError, pidValue) => {
+                if (readError) {
+                    const detail = `pid file not readable: ${pidFile} (${readError.message})`;
+                    console.error(detail);
+                    trySignal(index + 1, [...errors, detail]);
+                    return;
+                }
+
+                const pid = parseInt(String(pidValue).trim(), 10);
+                if (!Number.isInteger(pid) || pid <= 0) {
+                    const detail = `invalid nginx pid in ${pidFile}`;
+                    console.error(detail);
+                    trySignal(index + 1, [...errors, detail]);
+                    return;
+                }
+
+                try {
+                    process.kill(pid, 'SIGHUP');
+                    console.log(`Nginx reload signal sent successfully to pid ${pid} using ${pidFile}`);
+                    resolve();
+                } catch (error) {
+                    const detail = `failed to signal pid ${pid} from ${pidFile}: ${error.message}`;
+                    console.error(detail);
+                    trySignal(index + 1, [...errors, detail]);
+                }
+            });
+        };
+
+        trySignal(0);
+    });
+}
  
 app.post('/api/acme/test', async (req, res) => {
     try {
@@ -430,28 +482,16 @@ app.post('/api/acme/obtain-certificate', async (req, res) => {
     try {
         console.log('Starting certificate obtainment...');
         const result = await vaultPkiManager.obtainCertificate();
+        await reloadNginx();
         
         const status = vaultPkiManager.getStatus();
         
         res.json({
             success: true,
-            message: 'Certificate obtained successfully',
+            message: 'New certificate obtained, installed, and nginx reloaded successfully',
+            result,
             status: status
         });
-        
-        // Reload nginx to use new certificate
-        setTimeout(() => {
-            console.log('Reloading nginx...');
-            const { exec } = require('child_process');
-            exec('nginx -s reload', (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Error reloading nginx:', error);
-                } else {
-                    console.log('Nginx reloaded successfully');
-                }
-            });
-        }, 1000);
-        
     } catch (error) {
         console.error('Error obtaining certificate:', error);
         res.status(500).json({
@@ -463,32 +503,23 @@ app.post('/api/acme/obtain-certificate', async (req, res) => {
 
 app.post('/api/acme/retrieve-certificate', async (req, res) => {
     try {
-        console.log('Retrieving certificate from Vault...');
+        console.log('Retrieving latest certificate from Vault...');
+        const result = await vaultPkiManager.retrieveLatestCertificate();
         
-        // Use the same obtainCertificate method - it will fetch the latest certificate from Vault
-        const result = await vaultPkiManager.obtainCertificate();
-        
+        if (result.changed) {
+            await reloadNginx();
+        }
+
         const status = vaultPkiManager.getStatus();
         
         res.json({
             success: true,
-            message: 'Certificate retrieved and installed successfully',
+            message: result.changed
+                ? 'Latest certificate retrieved, installed, and nginx reloaded successfully'
+                : (result.message || 'Certificate retrieval completed'),
+            result,
             status: status
         });
-        
-        // Reload nginx to use the retrieved certificate
-        setTimeout(() => {
-            console.log('Reloading nginx...');
-            const { exec } = require('child_process');
-            exec('nginx -s reload', (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Error reloading nginx:', error);
-                } else {
-                    console.log('Nginx reloaded successfully');
-                }
-            });
-        }, 1000);
-        
     } catch (error) {
         console.error('Error retrieving certificate:', error);
         res.status(500).json({
